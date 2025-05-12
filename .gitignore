@@ -11,7 +11,16 @@ apps/mdm_app/z_Do_Not_Sync_or_use
 /app/!1 TO CLEAN/*
 
 # Mac and cache folders :
-.DS_Store
 __pycache__/
 *.pyc
 *.pyo
+
+# IDE / editor folders
+# git rm -r --cached .windsurf
+# git rm -r --cached .vscode
+.vscode/
+.windsurf/
+
+# macOS cruft (if you ever hit .DS_Store again) - git rm --cached .DS_Store
+
+.DS_Store
