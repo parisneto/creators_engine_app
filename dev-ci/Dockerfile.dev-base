@@ -1,0 +1,63 @@
+# Dockerfile.base
+
+# Using Python 3.11 as an example, adjust if needed
+FROM python:3.11-slim
+
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      # For Pillow:
+      libjpeg62-turbo \
+      libpng16-16 \
+      # For Matplotlib:
+      libfreetype6 \
+      # General/Networking/Crypto (often needed by google-cloud deps):
+      libssl3 \
+      libffi8 \
+      zlib1g \
+      # Maybe needed by numpy/scipy via seaborn (optional, for potential performance):
+      # libgomp1 \
+      # Removed: libbrotli1, libsnappy1v5, liblz4-1, libzstd1 (add back if known needed)
+ && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables
+# ENV PYTHONUNBUFFERED=1
+# ENV PYTHONIOENCODING=utf-8
+ENV PORT=8080
+# Set Streamlit vars (cleaner than CMD flags)
+ENV STREAMLIT_SERVER_PORT=8080
+ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
+ENV STREAMLIT_SERVER_ENABLE_CORS=false
+ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+ENV APPMODE="PROD"
+
+
+# --- OS Dependencies ---
+# Add any 'apt-get install' commands here if your app needs them
+# Example:
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#    package1 \
+#    package2 \
+#    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /app
+
+# Prevent Python from writing pyc files and buffering stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# --- Python Dependencies ---
+# Copy only the dependency definition file(s)
+COPY requirements.txt ./
+# If you have other files like setup.py or pyproject.toml, copy them too
+
+# Install Python dependencies (This is the slow step we run infrequently)
+# Using --no-cache-dir is good practice for image size
+# RUN pip install --no-cache-dir -r requirements.txt
+# Upgrade pip and Install Python dependencies using pre-built wheels
+# Layer invalidated only if requirements.txt changes (or base image changes).
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir -r requirements.txt
+
+
+# This image is just the base environment. No app code, no CMD needed here.

@@ -1,0 +1,24 @@
+# Ignore all files in the z_Do_Not_Sync_or_use directory
+apps/mdm_app/z_Do_Not_Sync_or_use
+/z_Do_Not_Sync_or_use
+/data/*.parquet
+/data_mdm/*.parquet
+/data_multi/*.parquet
+/data/data_mdm/*.parquet
+/data/data_multi/*.parquet
+*.parquet
+/z_Do_Not_Sync_or_use
+/app/z_Do_Not_Sync_or_use
+/!1 TO CLEAN
+/app/!1 TO CLEAN
+/z_Do_Not_Sync_or_use/*
+/app/z_Do_Not_Sync_or_use/*
+/!1 TO CLEAN/*
+/app/!1 TO CLEAN/*
+
+
+# Mac and cache folders :
+.DS_Store
+__pycache__/
+*.pyc
+*.pyo

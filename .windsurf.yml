@@ -1,0 +1,103 @@
+version: '1.0'
+caching:
+  base_load_data:
+    decorator: "@st.cache_resource(ttl='1d')"
+    rules:
+      - Load parquet files once per container start.
+      - Perform all permanent preprocessing inside the loader
+        (type fixes, joins, computed columns).
+      - DO NOT mutate later.
+      - Return a dict of clean DataFrames;
+  user_load_data:
+    decorator: "@st.cache_data(ttl='15m')"   # adjust TTL as needed
+    rules:
+      - Load DataFrames locally, per-user session from base_load_data with .copy()
+      - Use to apply Filtering
+      - Use for expensive per-user derivations (group-bys, stats).
+      - Always call .copy() before mutating.
+      - Use for other use cases where per-user session is required. Not limited to examples : custom joins or filters, Fillna, Normalization of features, etc
+  invalidation:
+    rules:
+      - Call <loader>.clear() after writing fresh parquet files.
+      - Container restart also refreshes everything.
+
+filtering:
+  rules:
+    - Each page declares a main dataframe which determines the primary filter options
+    - Filters are namespaced by page_id to prevent cross-page conflicts
+    - Standard filter layouts are provided for common dataframe types
+    - Filters are presented in a popover element with clear labels
+    - Filter state is persisted in session state using the page_id namespace
+    - Filter summary is displayed below the filter popover for visibility
+    - Additional dataframes used in a page can have local filtering logic if needed
+
+
+# Code organization rules
+code_organization:
+  rules:
+    - Keep subpages or blocks in separate files in the modules/blocks folder
+    - Each page module must implement a render() function for project navigation
+    - Keep files small and focused on a single responsibility
+    - Use proper docstrings and comments for code clarity
+    - Follow the template pattern for new data pages
+
+# Page structure rules
+page_structure:
+  rules:
+    - Each page should declare its main dataframe
+    - Filters should be managed by the FilterManager class
+    - Use tabs for organizing different sections/blocks
+    - Provide clear filter summaries for users
+    - Include cache management options in the UI
+
+# proposal of new rules enforcement
+rule additions:
+  new rules :
+    - consider suggesting adding more rules to @.windsurf.yml
+    - write and propose in chat only if the rule is:
+      - small
+      - effective
+      - principle based
+      - specific to the project codebase and learned from prompts, errors or code understanding
+
+# Standardized documentation approach
+documentation:
+  file_header:
+    template: |
+      # HISTORY: {timestamp} {brief_description_of_changes}. See previous history below.
+    rules:
+      - Use HISTORY: prefix for changelog
+      - Provide concise, meaningful change description
+      - Reference previous history for full context
+
+# Data display and formatting guidelines
+data_display_rules:
+  metrics_formatting:
+    description: Standardized metric and number formatting for data visualization
+    rules:
+      - integers: Display without decimal places
+      - floats: Maximum 2 decimal places
+      - percentages: Always display as whole number with % sign (e.g., 50% instead of 0.50)
+      - decimal_separator: Always use period (.)
+      - thousand_separator: Use comma (,) for readability
+
+  code_principles:
+    - Prioritize clarity and readability in data presentation
+    - Ensure consistent formatting across all data visualizations
+    - Add context to numeric representations
+    - Make data interpretation intuitive
+
+
+# plotting:
+#   plotly:
+#     rules:
+#       - For heavy charts, wrap creation in a button/tab/expander so
+#         it only runs on demand.
+#       - When interactivity is not required, render with
+#         st.plotly_chart(fig, config={"staticPlot": True}).
+
+# memory_debugging:
+#   rules:
+#       - Temporary: add a "Force GC" st.button calling gc.collect()
+#         while profiling leaks; remove in production.
+

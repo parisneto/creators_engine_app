@@ -1,0 +1,54 @@
+#syntax=docker/dockerfile:1.2
+# gcloud config set builds/use_kaniko True
+steps:
+# Step 1: Build the Docker image using cache from ':latest'
+- name: 'gcr.io/cloud-builders/docker'
+  id: BuildImage # Give the step an ID for clarity
+  # Add environment variable to enable BuildKit
+  env:
+    - 'DOCKER_BUILDKIT=1'
+  args:
+    [
+      'build',
+      # Tag with the unique tag provided by substitution (e.g., includes commit SHA)
+      '-t', '${_IMAGE_TAG}',
+      '--cache-from', '${_REGION}-docker.pkg.dev/fleet-gamma-448616-m1/creatorsengine-app-repo/creators-engine-ia-app-image:latest',
+      # '--cache-to', 'type=registry,ref=${_REGION}-docker.pkg.dev/fleet-gamma-448616-m1/creatorsengine-app-repo/creators-engine-ia-app-image:latest',
+
+      # Specify your Dockerfile path
+      '-f', '.devcontainer/Dockerfile.prod',
+      # Build context directory
+      '.',
+    ]
+
+# Step 2: Push the unique image tag (e.g., gcr.io/project/image:commitsha)
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '${_IMAGE_TAG}']
+
+# Step 3: Tag the unique image also as ':latest' for caching purposes
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['tag', '${_IMAGE_TAG}', '${_REGION}-docker.pkg.dev/fleet-gamma-448616-m1/creatorsengine-app-repo/creators-engine-ia-app-image:latest'] # Use the same Artifact Registry path
+
+# Step 4: Push the ':latest' tag so it can be used by the next build's --cache-from
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '${_REGION}-docker.pkg.dev/fleet-gamma-448616-m1/creatorsengine-app-repo/creators-engine-ia-app-image:latest'] # Use the same Artifact Registry path
+
+# Specify the images to be persisted by Cloud Build
+images:
+- '${_IMAGE_TAG}' # The uniquely tagged image for deployment
+# --- CACHE CORRECTION ---
+# Add the ':latest' tag here so its layers are saved for future --cache-from use
+- '${_REGION}-docker.pkg.dev/fleet-gamma-448616-m1/creatorsengine-app-repo/creators-engine-ia-app-image:latest'
+
+# Define substitution variables (ensure _IMAGE_TAG is unique per build)
+substitutions:
+  _IMAGE_TAG: 'default-tag' # Should be overridden by gcloud builds submit
+  _REGION: 'us-central1' # Example: Pass your region or define it here
+  # Define _SERVICE_NAME or repo name if needed for the cache tag path
+  # _SERVICE_NAME: 'creators-engine-ia-app-image' # my-streamlit-app'
+
+# --- PERFORMANCE OPTIMIZATION ---
+# Recommend uncommenting and adjusting machine type
+# options:
+#   machineType: 'E2_HIGHCPU_8' # Strongly recommended
+  # diskSizeGb: 100 # Optional: Increase disk if needed for large dependencies

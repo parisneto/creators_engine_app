@@ -1,0 +1,26 @@
+# FROM python:3.11-slim
+FROM python:3.11-slim-bullseye
+
+# Install everything VS Code’s CLI needs plus git
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      bash \
+      coreutils \
+      git \
+      build-essential \
+      curl \
+      wget \
+      ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY requirements.txt .
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir -r requirements.txt
+
+# Copy your code
+COPY . .
+ENV APPMODE="DEV"
+
+# Let VS Code spawn its own shell server
+CMD ["bash"]

@@ -1,0 +1,31 @@
+# Dockerfile.dev-app
+
+# ARG to receive the base image tag from the build command
+ARG BASE_IMAGE_TAG=us-central1-docker.pkg.dev/fleet-gamma-448616-m1/creatorsengine-app-repo/dev-base:latest
+
+# --- Use your pre-built base image ---
+FROM ${BASE_IMAGE_TAG}
+
+# WORKDIR is already set to /app in the base image
+
+# --- Application Code Layer ---
+# Copy your application code (this should be very fast)
+COPY . .
+
+# Expose the port the app runs on
+EXPOSE 8080
+
+# Set environment variables (these seem correct from your example)
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONIOENCODING=utf-8
+ENV PORT=8080
+ENV STREAMLIT_SERVER_PORT=8080
+ENV STREAMLIT_SERVER_ADDRESS=0.0.0.0
+ENV STREAMLIT_SERVER_ENABLE_CORS=false
+ENV STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION=false
+ENV APPMODE="PROD"
+# Or maybe "DEV" for this workflow? Adjust as needed.
+
+# Your CMD (seems correct from your example)
+# Ensure dataretriever.py is part of the 'COPY . .'
+CMD ["bash", "-c", "python /app/utils/dataretriever.py && exec streamlit run main.py --server.port=8080 --server.address=0.0.0.0"]

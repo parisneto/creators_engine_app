@@ -1,0 +1,21 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.dev
+    volumes:
+      - .:/app:cached
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:cached
+    working_dir: /app
+    command: sleep infinity    # VS Code will override with its shell server
+    ports:
+      - "8501:8501"
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+
+  prod:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile.prod
+    ports:
+      - "8080:8080"

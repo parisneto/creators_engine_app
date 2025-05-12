@@ -1,0 +1,70 @@
+# The provided instructions do not specify any changes to the Dockerfile.prod. Therefore, the content remains unchanged.
+
+# .devcontainer/Dockerfile.prod
+
+# 1) Builder stage: build all your Python wheels (including PyArrow)
+FROM python:3.11-slim AS builder
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential \
+      cmake \
+      ninja-build \
+      libffi-dev \
+      libssl-dev \
+      zlib1g-dev \
+      libbrotli-dev \
+      libsnappy-dev \
+      liblz4-dev \
+      libzstd-dev \
+      protobuf-compiler \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /wheels
+COPY requirements.txt .
+RUN python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir -r requirements.txt && \
+    pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
+
+# 2) Installer stage: install only the runtime dependencies + wheels
+FROM python:3.11-slim AS installer
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      libffi8 \
+      libssl3  \
+      zlib1g \
+      libbrotli1 \
+      libsnappy1v5 \
+      liblz4-1 \
+      libzstd1 \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /wheels
+COPY --from=builder /wheels /wheels
+RUN python -m pip install --upgrade pip && \
+    pip install --no-cache-dir --prefix=/opt/python /wheels/*.whl
+
+# 3) Production stage: distroless runtime
+# FROM gcr.io/distroless/python3:nonroot
+FROM python:3.11-slim
+
+# copy in Python + C‑extension libraries
+COPY --from=installer /opt/python /opt/python
+ENV PYTHONPATH=/opt/python/lib/python3.11/site-packages
+ENV PATH="/opt/python/bin:$PATH"
+ENV PYTHONIOENCODING=utf-8
+
+# # streamlit-specific commands for config
+# ENV LC_ALL=C.UTF-8
+# ENV LANG=C.UTF-8
+
+# # We are not using the Streamlit default of 8501 so make sure to set an environmental variable when deploying of "STREAMLIT_SERVER_PORT=8080"
+EXPOSE 8080
+ENV PORT 8080
+
+WORKDIR /app
+COPY . .
+
+
+CMD ["/opt/python/bin/streamlit", "run", "main.py", "--server.port=8080", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]

@@ -1,0 +1,24 @@
+# cloudbuild.base.yaml
+steps:
+  # Build the base image, ensuring it's for linux/amd64 (Cloud Run's architecture)
+  # Cloud Build workers are typically amd64, but specifying platform is safest.
+- name: 'gcr.io/cloud-builders/docker'
+  args: [
+      'build',
+      '--platform', 'linux/amd64', # Explicitly target Cloud Run architecture
+      '-t', '${_BASE_IMAGE_TAG}',
+      '-f', 'dev-ci/Dockerfile.dev-base',
+      '.' # Build context directory
+    ]
+
+# Specify the image to be pushed to Artifact Registry
+images:
+- '${_BASE_IMAGE_TAG}'
+
+options:
+  # Use a machine type suitable for dependency installation if needed
+  # machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+
+substitutions:
+  _BASE_IMAGE_TAG: 'unset' # This will be provided by the build script

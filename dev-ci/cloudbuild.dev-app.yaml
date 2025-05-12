@@ -1,0 +1,40 @@
+# cloudbuild.dev.yaml (for fast code-only updates)
+steps:
+# 1 - Build the development app image using Dockerfile.dev
+# This step assumes the base image already exists in Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  id: BuildDevAppImage
+  args: [
+      'build',
+      # Tag the final image with a unique identifier (e.g., commit sha)
+      '--tag=${_DEV_APP_IMAGE_TAG}',
+      # Pass the base image tag to the Dockerfile.dev ARG
+      '--build-arg',
+      'BASE_IMAGE_TAG=${_BASE_IMAGE_TAG}',
+      # Specify the development Dockerfile
+      '-f', 'dev-ci/Dockerfile.dev-app',
+      # Build context (current directory)
+      '.'
+    ]
+
+# 2 - Push the uniquely tagged development app image
+# This image only contains the code layer on top of the base.
+- name: 'gcr.io/cloud-builders/docker'
+  id: PushDevAppImage
+  args: ['push', '${_DEV_APP_IMAGE_TAG}']
+
+# Note: No explicit deployment step here. The deploy script handles it after the build.
+
+# List the final image built by this pipeline
+images:
+- '${_DEV_APP_IMAGE_TAG}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  # A standard machine type is usually fine for just copying code
+  # machineType: 'E2_MEDIUM'
+
+substitutions:
+  # Provided by the deploy-dev.sh script
+  _DEV_APP_IMAGE_TAG: 'unset' # e.g., us-central1-docker.pkg.dev/.../dev-app:commitsha
+  _BASE_IMAGE_TAG: 'unset'    # e.g., us-central1-docker.pkg.dev/.../dev-base:latest

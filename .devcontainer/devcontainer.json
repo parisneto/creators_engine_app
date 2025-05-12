@@ -1,0 +1,55 @@
+{
+    "name": "Creators Engine IA Lab(dev)",
+
+    // point at your local image
+    // ( no dockerfile option 1)
+    // "image": "streamlit-filter-ui-dev:latest",
+    "image": "ce_applab-dev:latest",
+
+    // where your code will live inside the container
+    "workspaceFolder": "/app",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/app,type=bind",
+
+    // carry over any mounts you need (e.g. GCP creds)
+    "mounts": [
+      "source=${env:HOME}/.config/gcloud,target=/root/.config/gcloud,type=bind,consistency=cached",
+      "source=${env:HOME}/.config/gcloud/application_default_credentials.json,target=/root/.config/gcloud/application_default_credentials.json,type=bind,consistency=cached"
+    ],
+
+    // forward Streamlit’s port
+    "forwardPorts": [8501],
+
+    "containerEnv": {
+      "GOOGLE_APPLICATION_CREDENTIALS": "/root/.config/gcloud/application_default_credentials.json",
+      "GOOGLE_CLOUD_PROJECT": "fleet-gamma-448616-m1",
+      "GCP_REGION": "us-central1",
+      "GCS_BUCKET": "creators_engine_production",
+      "GCS_VISION_PREFIX": "creators_engine_vision",
+      "APPMODE": "DEV"
+    },
+
+    // keep built‑in features off (your image already has git, bash, etc.)
+    "features": {
+      "ghcr.io/devcontainers/features/common-utils:2": {
+        "installZsh": false,
+        "installOhMyZsh": false,
+        "installFish": false
+      }
+    },
+
+    // carry over your VS Code settings & extensions
+    "customizations": {
+      "vscode": {
+        "settings": {
+          "terminal.integrated.defaultProfile.linux": "bash"
+        },
+        "extensions": [
+          "ms-python.python",
+          "ms-azuretools.vscode-docker"
+        ]
+      }
+    },
+
+    // install any mdm_app‑specific Python deps
+    "postStartCommand": "pip install --no-cache-dir -r requirements.txt"
+}
