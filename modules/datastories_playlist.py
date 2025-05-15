@@ -47,7 +47,7 @@ def render():
     else:
         # Show debug info
         with st.expander("Debug Info"):
-            st.code(st.session_state)
+            st.json(st.session_state)
             st.divider()
             st.code(filtered_df.columns)
             st.dataframe(
