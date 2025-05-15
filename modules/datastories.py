@@ -29,15 +29,28 @@ def render():
     filter_manager.render_filter_summary()
 
     # Apply filters to main df
-    filters = filter_manager.get_filter_state()
     filtered_df = filter_manager.apply_filters(df_nerdalytics)
 
-    # Tab navigation for subpages
-    section_tabs = st.tabs([block["name"] for block in PAGE_BLOCKS])
-    for idx, block in enumerate(PAGE_BLOCKS):
-        with section_tabs[idx]:
-            st.header(block["name"])
-            block["func"](filtered_df)
+    # Check if filtered dataframe is empty
+    if filtered_df is None or filtered_df.empty:
+        st.warning(
+            "No data matches your current filter selections. Try adjusting your filters."
+        )
+        # Still show tabs but with empty dataframe
+        section_tabs = st.tabs([block["name"] for block in PAGE_BLOCKS])
+        for idx, block in enumerate(PAGE_BLOCKS):
+            with section_tabs[idx]:
+                st.warning(block["name"])
+                st.info(
+                    "No data available with current filters. Please adjust your filter selections."
+                )
+    else:
+        # Tab navigation for subpages with filtered data
+        section_tabs = st.tabs([block["name"] for block in PAGE_BLOCKS])
+        for idx, block in enumerate(PAGE_BLOCKS):
+            with section_tabs[idx]:
+                # st.header(block["name"]) ( repeated  from tabs title - not needed)
+                block["func"](filtered_df)
 
 
 if __name__ == "__main__":

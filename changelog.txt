@@ -1,0 +1,28 @@
+CreatorsEngine App v.0.1.2
+May 15th, 2025
+
+- [Change] Refactoring of filter_manager_v2.py to handle filters more flexibly and safely.
+- [Added] Bugs on 2nd click partilly returned after last changes.
+
+CreatorsEngine App v.0.1.1
+May 6th, 2025
+
+- [Fixed] Bugs on 2nd click and cascading filters fixed.
+- [Added] filter_manager_v2.py - started modularization to organize the data stories and visualizations components
+- [Removed] Cleaning and removal of old code to prepare for refactoring.
+
+CreatorsEngine App v.0.1.0
+May 1st, 2025
+- [Fixed] Final Caching and Data Loading Enhancements - using @st.cache_data for session Df's to be filtered and @st.cache_resource for data loading the main DF's to be shared across the app users/sessions automatically updating source parquet files from Google Cloud Storage.
+
+
+
+
+This file will contain the changelog of the app, starting from version 0.1.0
+expected categories are :
+- Fixed
+- Added
+- Change
+- Security
+- Removed
+- Deprecated

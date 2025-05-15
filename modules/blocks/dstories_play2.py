@@ -1,11 +1,11 @@
 import streamlit as st
-import pandas as pd
+
 
 def render(df):
     """
     More Analysis block for Data Stories. Receives a filtered DataFrame.
     """
-    st.subheader("Further Analysis")
+    st.subheader("Further Analysis - Playlists")
     if df is None or df.empty:
         st.warning("No data available after filtering. Try adjusting your filters.")
         return

@@ -1,11 +1,11 @@
 import streamlit as st
-import pandas as pd
+
 
 def render(df):
     """
     Overview block for Data Stories. Receives a filtered DataFrame.
     """
-    st.subheader("Filtered Data Overview")
+    st.subheader("Filtered Data Overview - Playlists")
     if df is None or df.empty:
         st.warning("No data available after filtering. Try adjusting your filters.")
         return
@@ -23,5 +23,6 @@ def render(df):
     # Example plot (if plotly/matplotlib is available)
     if "video_type" in df.columns:
         import plotly.express as px
+
         fig = px.histogram(df, x="video_type", title="Distribution of Video Types")
         st.plotly_chart(fig, use_container_width=True)
