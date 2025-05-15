@@ -18,6 +18,8 @@ __pycache__/
 # IDE / editor folders
 # git rm -r --cached .windsurf
 # git rm -r --cached .vscode
+# git ls-files | grep -E '(^\.vscode/|^\.windsurf/)'
+
 .vscode/
 .windsurf/
 
