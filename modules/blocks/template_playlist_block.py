@@ -34,7 +34,8 @@ def template_playlist_block(df_nerdalytics, filter_manager):
         filtered_df_playlist = filtered_df_playlist[filtered_df_playlist["playlist_title"].isin(filters["playlists"])]
 
     # Show dataframe info
-    st.write(f"Filtered playlist dataframe shape: {filtered_df_playlist.shape}")
+    st.write(f"Filtered playlist dataframe shape: \n{filtered_df_playlist.shape}")
+    st.code(f"Filtered playlist dataframe columns: {filtered_df_playlist.columns}")
 
     # Show sample data
     with st.expander("Sample Data"):

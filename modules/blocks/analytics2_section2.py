@@ -5,9 +5,33 @@ import numpy as np
 
 def analytics2_section2(df_nerdalytics, df_playlist_full_dedup):
     st.write("This is the page for Metadata 2")
+
     # st.dataframe(df)
+    len1 = len(df_nerdalytics)
+    st.write("df2 from df_nerdalytics.shape before dropNa + Duplicates: ", df_nerdalytics.shape)
     df2 = df_nerdalytics.dropna(subset=['view_count']).copy()
     df2.dropna(subset=['video_type'], inplace=True)
+    len2 = len(df2)
+    st.write("df2 from df_nerdalytics.shape after dropNa: ", df2.shape)
+    df2.drop_duplicates(inplace=True)
+    len3 = len(df2)
+    st.write("df2 from df_nerdalytics.shape after dropNa + Duplicates: ", df2.shape)
+    # df2.dropna(subset=['view_count'], inplace=True)
+    # df2.dropna(subset=['like_count'], inplace=True)
+    df2.dropna(subset=['comment_count'], inplace=True)
+    len4 = len(df2)
+    st.write("df2 from df_nerdalytics.shape after dropNa + Duplicates: ", df2.shape)
+    st.write("len1: ", len1)
+    st.write("len2: ", len2)
+    st.write("len3: ", len3)
+    st.write("len4: ", len4)
+    percent = f"{len4/len1*100:.2f}%"
+    st.write("len4/Len1: ", percent)
+    st.subheader("Linhas Eliminadas " + percent)
+
+
+
+
 
     st.divider()
 

@@ -1,6 +1,127 @@
+
+
+[server]
+runOnSave = true
+# List of folders that should not be watched for changes.
+# Relative paths will be taken as relative to the current working directory.
+# Example: ['/home/user1/env', 'relative/path/to/folder']
+# Default: []
+folderWatchBlacklist = ["/app/z_Do_Not_Sync_or_use", "/app/!1 TO CLEAN"]
+
+# Change the type of file watcher used by Streamlit, or turn it off
+# completely.
+# Allowed values:
+# - "auto"     : Streamlit will attempt to use the watchdog module, and
+#                falls back to polling if watchdog is not available.
+# - "watchdog" : Force Streamlit to use the watchdog module.
+# - "poll"     : Force Streamlit to always use polling.
+# - "none"     : Streamlit will not watch files.
+# Default: "auto"
+fileWatcherType = "watchdog"
+
+
+# Enables support for websocket compression.
+# Default: false
+enableWebsocketCompression = true
+
+# TTL in seconds for sessions whose websockets have been disconnected. The server
+# may choose to clean up session state, uploaded files, etc for a given session
+# with no active websocket connection at any point after this time has passed.
+# Default: 120
+disconnectedSessionTTL = 120
+
+
+
+[global]
+disableWidgetStateDuplicationWarning = true
+
+
+[logger]
+
+# Level of logging for Streamlit's internal logger: "error", "warning",
+# "info", or "debug".
+# Default: "info"
+level = "info"
+#level = "debug"
+
+
+[client]
+# showErrorDetails = "full"
+showErrorDetails = "none"
+
+[runner]
+
+# Allows you to type a variable or string by itself in a single line of
+# Python code to write it to the app.
+# Default: true
+magicEnabled = true
+
+# Handle script rerun requests immediately, rather than waiting for script
+# execution to reach a yield point. This makes Streamlit much more
+# responsive to user interaction, but it can lead to race conditions in
+# apps that mutate session_state data outside of explicit session_state
+# assignment statements.
+# Default: true
+# fastReruns = true
+fastReruns = false
+
+# Raise an exception after adding unserializable data to Session State.
+# Some execution environments may require serializing all data in Session
+# State, so it may be useful to detect incompatibility during development,
+# or when the execution environment will stop supporting it in the future.
+# Default: false
+enforceSerializableSessionState = true
+
+# Adjust how certain 'options' widgets like radio, selectbox, and
+# multiselect coerce Enum members when the Enum class gets re-defined
+# during a script re-run. For more information, check out the docs:
+# https://docs.streamlit.io/develop/concepts/design/custom-classes#enums
+# Allowed values:
+# - "off"          : Disables Enum coercion.
+# - "nameOnly"     : Enum classes can be coerced if their member names match.
+# - "nameAndValue" : Enum classes can be coerced if their member names AND
+#                    member values match.
+# Default: "nameOnly"
+enumCoercion = "nameOnly"
+
+
+
+[browser]
+
+# Internet address where users should point their browsers in order to
+# connect to the app. Can be IP address or DNS name and path.
+# This is used to:
+# - Set the correct URL for CORS and XSRF protection purposes.
+# - Show the URL on the terminal
+# - Open the browser
+# Default: "localhost"
+serverAddress = "localhost"
+
+# Whether to send usage statistics to Streamlit.
+# Default: true
+gatherUsageStats = false
+
 [theme]
 primaryColor = "#0178E4"  # Blue color
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F0F2F6"
 textColor = "#31333F"
 font = "sans serif"
+
+# The preset Streamlit theme that your custom theme inherits from.
+
+# Background color used for code blocks.
+codeBackgroundColor = "#d5d5d5"
+
+
+# The font family to use for code (monospace) in the sidebar. This can be
+# one of the following:
+# - "sans-serif"
+# - "serif"
+# - "monospace"
+# - the `font` value for a custom font table under [[theme.fontFaces]]
+# - a comma-separated list of these (as a single string) to specify
+#   fallbacks
+codeFont = "monospace"
+#codeFont = "sans-serif"
+showSidebarBorder = true

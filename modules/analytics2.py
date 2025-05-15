@@ -16,6 +16,7 @@ from modules.blocks.analytics2_section3 import analytics2_section3
 from modules.blocks.analytics2_section4 import analytics2_section4
 from modules.blocks.analytics2_section5 import analytics2_section5
 from modules.blocks.analytics2_section6 import analytics2_section6
+from modules.blocks.analytics2_section7 import analytics2_section7
 
 # Set to True to show debug information
 # DEBUG = True
@@ -23,12 +24,13 @@ DEBUG = False
 
 # Configurable Block List
 PAGE_BLOCKS = [
-    {"name": "Playlist Playground", "func": analytics2_section1},
+    {"name": "Big Numbers", "func": analytics2_section1},
     {"name": "Metadata", "func": analytics2_section2},
     {"name": "Radar Charts", "func": analytics2_section3},
-    {"name": "Correlações", "func": analytics2_section4},
+    {"name": "TBD", "func": analytics2_section4},
     {"name": "Playlists", "func": analytics2_section5},
-    {"name": "Slope", "func": analytics2_section6},
+    {"name": "Tags Playground", "func": analytics2_section6},
+    {"name": "Metadata 2", "func": analytics2_section7},
 ]
 
 # --- FILTER HEADER LOGIC (namespaced, modular, robust) ---
@@ -52,11 +54,17 @@ def reset_filters():
 
 
 def analytics2_filter_header(df_nerdalytics):
+
     """Shared filter header for analytics2 page. Only handles persistence and display, not actual filtering."""
     init_filter_state()
     filters = st.session_state[FILTER_NAMESPACE]
 
-    with st.popover("🎯 Future Filters", use_container_width=True):
+    col1, col2 = st.columns(2)
+    with col1:
+        #nothing here
+        st.session_state[1] = ""
+    with col2:
+        with st.popover("🎯 Future Filters", use_container_width=True):
                         # st.subheader("Playlist Filters")
                         # col1, col2, col3 = st.columns(3)
                         # with col1:
@@ -80,7 +88,7 @@ def analytics2_filter_header(df_nerdalytics):
                         #         default=filters["language"],
                         #         key=f"{FILTER_NAMESPACE}_language"
                         #     )
-        st.button("Reset Filters", on_click=reset_filters, key=f"{FILTER_NAMESPACE}_reset_top")
+                    st.button("Reset Filters", on_click=reset_filters, key=f"{FILTER_NAMESPACE}_reset_top")
 
     # Single-line summary for active filters
     summary_parts = []
@@ -101,7 +109,7 @@ def render():
     df_nerdalytics = load_data("tbl_nerdalytics")
     # df_slope_full = load_data("tbl_slope_full")
     df_playlist_full_dedup = load_data("tbl_playlist_full_dedup")
-
+    # st.button("Reset Filters", on_click=reset_filters, key=f"{FILTER_NAMESPACE}_reset_top")
     with st.popover("🎯 DataFrames", use_container_width=True):
         st.write(" dataframes loaded (shape)")
         st.write("df_nerdalytics : ", df_nerdalytics.shape)
@@ -110,12 +118,11 @@ def render():
         st.button("Reset Cache", on_click=st.cache_data.clear)
         st.button("Reset Filters", on_click=reset_filters, key=f"{FILTER_NAMESPACE}_reset")
         st.button("🔄 Force GC", on_click=gc.collect)
-    # st.title("Analytics2 home page Title ")
-
-    # --- SHARED FILTER HEADER ---
+        st.title("Analytics2 home page Title ")
+    # --- SHARED "future" FILTER HEADER ---
     analytics2_filter_header(df_nerdalytics)
-
     # Create tabs for each PAGE_BLOCKS entry
+
     section_tabs = st.tabs([block["name"] for block in PAGE_BLOCKS])
 
     # Render each section block in its corresponding tab

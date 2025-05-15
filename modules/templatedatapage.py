@@ -9,6 +9,7 @@ from utils.filter_manager import FilterManager
 from modules.blocks.template_nerdalytics_block import template_nerdalytics_block
 from modules.blocks.template_slope_block import template_slope_block
 from modules.blocks.template_playlist_block import template_playlist_block
+from modules.blocks.template_channels_block import template_channels_block
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +156,7 @@ def create_template_page():
             {"name": "Nerdalytics", "func": template_nerdalytics_block},
             {"name": "Slope Data", "func": template_slope_block},
             {"name": "Playlists", "func": template_playlist_block},
+            {"name": "Channels", "func": template_channels_block},
         ]
     )
     page._render()

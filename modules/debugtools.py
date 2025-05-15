@@ -16,6 +16,7 @@ To create a new page:
 4. (Optional) Import shared data, filters, or external blocks as needed.
 """
 import streamlit as st
+import pandas as pd
 import subprocess, os
 from typing import Callable, List, Dict
 from utils.page_framework import render_page
@@ -23,9 +24,14 @@ from utils.dataretriever import main as dataretriever_main
 from utils.auth import SHOW_DEBUG_INFO
 from utils.dataloader import load_data
 import gc
+import plotly.express as px
+from datetime import datetime, timezone
+
 # ---- Example External Block Import ----
 # from modules.blocks.hello_block import hello_block  # External block example
 from modules.blocks.debugtools1 import debugtools1  # External block example
+from modules.blocks.debugtools3 import debugtools3  # External block example
+from modules.blocks.debugtools4 import debugtools4  # External block example
 from modules.blocks.fileman import fileman  # External block example
 
 
@@ -95,26 +101,112 @@ def debugtools2():
     """A simple local block for demonstration."""
     st.header("Debugtools2 Block")
     st.write("This is a local block for Debugtools2")
+    st.divider()
+    df_channels = load_data("tbl_channels")
+    st.write("df_channels.shape : ", df_channels.shape)
+    st.write("df_channels.columns : ")
+    st.code(df_channels.columns.tolist())
+    st.dataframe(df_channels)
+    # st.divider()
 
-    st.markdown("---")
-    df_playlist_full_dedup = load_data("tbl_playlist_full_dedup")
-    # Capture info() output as string using StringIO
-    import io
-    buffer = io.StringIO()
-    df_playlist_full_dedup.info(buf=buffer)
-    playlist_full_dedupinfo = buffer.getvalue()
-    st.write("playlist_full_dedupinfo : ")
-    st.code(playlist_full_dedupinfo, language="python")
+    # st.write("df_channels_sample : ")
+    # st.divider()
 
-def debugtools3():
+
+
+    #radar plot
+
+
+    df_channels_sample = df_channels[['snippet_custom_url', 'channel_title', 'description', 'channel_custom_url',  'view_count', 'subscriber_count', 'video_count', 'country', 'channel_id', 'channel_published_at']].copy()
+    # st.code(df_channels_sample.columns.tolist())
+    # st.dataframe(df_channels_sample)
+    # st.divider()
+
+    # Calculate years since published (1 decimal)
+    now = datetime(2025, 5, 12, tzinfo=timezone.utc)
+    df_channels_sample['channel_published_at'] = pd.to_datetime(df_channels_sample['channel_published_at'], utc=True, errors='coerce')
+    df_channels_sample['years_since_published'] = ((now - df_channels_sample['channel_published_at']).dt.total_seconds() / (365.25*24*3600)).round(1)
+
+    # st.write("df_channels_sample : ")
+
+    # st.dataframe(df_channels_sample)
+    # import os
+    # st.write("OS write  : ")
+    # os.write(1,b'some text @@@@@@ $$$$$ %%%%%%')
+    # os.write(1,df_channels_sample.to_string().encode('utf-8'))
+    # console.log(df_channels_sample)
+    st.divider()
+    # Define metrics to normalize
+    radar_metrics = ['view_count', 'subscriber_count', 'video_count', 'years_since_published']
+
+    # Min-max normalization
+    df_norm = df_channels_sample.copy()
+    for col in radar_metrics:
+        min_val = df_norm[col].min()
+        max_val = df_norm[col].max()
+        if max_val > min_val:
+            df_norm[col] = (df_norm[col] - min_val) / (max_val - min_val)
+        else:
+            df_norm[col] = 0.0  # Handle constant columns
+
+    # Melt the normalized dataframe
+    df_radar = df_norm.melt(
+        id_vars=['snippet_custom_url'],
+        value_vars=radar_metrics,
+        var_name='Metric',
+        value_name='Value'
+    )
+
+    # Plot as before
+    fig = px.line_polar(
+        df_radar,
+        r='Value',
+        theta='Metric',
+        color='snippet_custom_url',
+        line_close=True,
+        template='plotly_dark',
+        markers=True
+    )
+    fig.update_traces(fill='toself', opacity=0.4)
+    fig.update_layout(title="Channel Metrics Radar Plot (Normalized)", legend_title_text='Channel')
+    st.plotly_chart(fig, use_container_width=True)
+
+    # # Prepare data for radar plot
+    # radar_metrics = ['view_count', 'subscriber_count', 'video_count', 'years_since_published']
+
+    # # Melt the dataframe for plotly express
+    # df_radar = df_channels_sample.melt(
+    #     id_vars=['snippet_custom_url'],
+    #     value_vars=radar_metrics,
+    #     var_name='Metric',
+    #     value_name='Value'
+    # )
+
+    # fig = px.line_polar(
+    #     df_radar,
+    #     r='Value',
+    #     theta='Metric',
+    #     color='snippet_custom_url',
+    #     line_close=True,
+    #     template='plotly_dark',
+    #     markers=True
+    # )
+    # fig.update_traces(fill='toself', opacity=0.4)
+    # fig.update_layout(title="Channel Metrics Radar Plot", legend_title_text='Channel')
+    # st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+def debugtools5():
 
     from utils.config import APPMODE
 
     st.header("APP MODE :")
     st.write("value : ", APPMODE)
 
-    st.header("Debugtools3 Block")
-    st.write("This is a local block for Debugtools3")
+    st.header("Debugtools4 Block")
+    st.write("This is a local block for Debugtools4")
 
     st.subheader("Debian Version")
     process = subprocess.run(["cat", "/etc/debian_version"],
@@ -136,9 +228,11 @@ def debugtools3():
 PAGE_BLOCKS: List[Dict[str, Callable]] = [
     {"name": "DataLoad", "func": intro_block},
     {"name": "File Manager", "func": fileman},
-    {"name": "debugtools1", "func": debugtools1},
-    {"name": "debugtools2", "func": debugtools2},
-    {"name": "OS Version", "func": debugtools3},
+    {"name": "1 debugtools1", "func": debugtools1},
+    {"name": "2 debugtools2", "func": debugtools2},
+    {"name": "3 debugtools3", "func": debugtools3},
+    {"name": "4 DF inspector", "func": debugtools4},
+    {"name": "5 OS Version", "func": debugtools5},
 ]
 
 # ---- Required Entrypoint ----

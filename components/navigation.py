@@ -6,8 +6,10 @@
 # 2024-03-27: Componente de navegação simplificado
 """
 
-import streamlit as st
 from urllib.parse import quote
+
+import streamlit as st
+
 
 def render_navigation(options, active_page=None, on_change=None):
     """
@@ -38,18 +40,18 @@ def render_navigation(options, active_page=None, on_change=None):
         button_text = f"{icon} {name}"
 
         if st.sidebar.button(
-            button_text,
-            key=f"nav_{key}",
-            type="primary" if is_active else "secondary"
+            button_text, key=f"nav_{key}", type="primary" if is_active else "secondary"
         ):
             selected = key
             # Update query parameter when page changes
             st.query_params["page"] = quote(key)
+            # st.experimental_set_query_params(page=key)
             if on_change:
                 on_change(key)
+                st.rerun()  # this fixes the issue with active button color
 
     # Ensure query parameter is always set
     if selected and "page" not in st.query_params:
         st.query_params["page"] = quote(selected)
-
+    # st.rerun()
     return selected

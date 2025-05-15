@@ -1,14 +1,66 @@
 Plan updated
 
 
-- Move new Dataload to Utils
+Done:
+- ~~Move new Dataload to Utils~~
+- ~~Add Channel and clean parquet files~~
+- ~~make Channel View for better channels df~~
+
+Pending:
+- Filter Class + wrapper + ui for multi DFs
 - DebugTools inspect Nan, Null, 0, etc
-- Add Channel and clean parquet files
 - Decide on datacleaning to be integrated on Dataload ?
 - clean Analytics2 ( bare minimum)
+- Metadata inspector on best practices
+- Custom Filter Logic: Allow for custom filter logic (e.g., ranges, regex) if your analysis requires it.
+
+
+```code :
+# Summary Table (Markdown)
+| Component | Method/Usage | Input | Output | Notes |
+|-----------------------|-------------------------------|-------------------------|-----------------------|----------------------------------------------------------|
+| FilterManager | render_filters(dataframe) | DataFrame | Updates session state | Renders UI for filters, stores user selections |
+| FilterManager | get_filter_state() | None | Dict | Returns current filter selections from session state |
+| FilterManager | apply_filters(df) | DataFrame | Filtered DataFrame | Applies selected filters to a DataFrame |
+| FilterManager | render_filter_summary() | None | UI summary | Shows a compact summary of active filters |
+| Main Page (host) | Renders popover + summary | N/A | N/A | Should host the filter UI and summary for all subpages |
+| Subpage/Section | Receives filtered df(s) | Filtered DataFrame(s) | Plots, tables, etc. | Should only use filtered dfs provided by main page |
+| Helper Function (TBD) | To enforce local filtering | df, filter_manager | Filtered DataFrame | Ensures all filtering happens on local copy |
+```
+
+
+"[YouTube Metadata Best-Practice Checklist.md](/app/docs/YouTube%20Metadata%20Best%E2%80%91Practice%20Checklist.md)"
+"[test](/docs/YouTube%20Metadata%20Best-Practice%20Checklist.md)"
+
+content = """# YouTube Metadata Best‑Practice Checklist
+*(Implementation‑ready metrics & future roadmap)*
+
+## 1  Implementation‑Ready Checklist
+These items can be scored automatically with **only the public fields returned by the YouTube Data API v3** (e.g. `snippet.*`, `contentDetails.*`).
+
+| # | Best Practice | Public API Fields | Goal / Threshold | Simple Scoring Formula | Channel‑Relative Bonus* |
+|---|---------------|------------------|------------------|------------------------|-------------------------|
+| 1 | **Concise Title** – keep ≤ 60 characters | `snippet.title` | 20–60 chars | `score = 1 if len(title) <= 60 else 0` | Compare to channel median title length; flag if > +1 SD above median |
+| 2 | **Keyword Early** – main keyword appears in first 30 chars of title | `snippet.title` | kw pos \< 30 | `score = 1 if pos < 30 else 0` | Use most‑common unigram across channel titles as “main keyword” baseline |
+| 3 | **Rich Description Length** – between 200 words and 5 000 chars | `snippet.description` | 200–5 000 chars | `score = min( len_chars / 5000 , 1 )` | Channel “normal” = median description length; show % difference |
+| 4 | **Chapters/Timestamps Present** – ≥ 3 timestamps starting at `0:00` | `snippet.description` | Regex `^0:00` + ≥ 3 matches | `score = min( count/3 , 1 )` | Report avg chapters per video in channel |
+| 5 | **Hashtags Within Limit** – ≤ 60 hashtags & placed at end | `snippet.description` | count ≤ 60 | `score = 1 if count<=60 else 0` | Median hashtags per video across channel |
+| 6 | **Basic Formatting Used** – bold / italic / strikethrough / lists | `snippet.description` | ≥ 1 formatting token | `score = min(tokens/5, 1)` | Show ratio tokens ∕ chars vs channel average |
+| 7 | **Clear CTA & Link** – at least one CTA phrase **and** URL | `snippet.description` | CTA regex & URL present | `score = 1 if both True else 0` | Compare CTA frequency to channel mean |
+
+\*Bonus calculation example (Description Length)
+
+```text
+best practice range: 200–5 000 chars
+channel range (P10–P90): 300–1 200 chars
+current video: 1 700 chars (≈ 42 % above channel P90; consider shortening)
 
 
 
+
+
+
+Ignored:
 /app/z_Do_Not_Sync_or_use
 /app/!1 TO CLEAN
 

@@ -54,7 +54,7 @@ PROMPT_PARQUET_FILES = [
     "data/duckdb_mirror/tbl_slope_full.parquet",
     "data/duckdb_mirror/tbl_analytics_filters.parquet",
     "data/duckdb_mirror/tbl_playlist_full_dedup.parquet",
-    "data/duckdb_mirror/tbl_channels.parquet"
+    "data/duckdb_mirror/tbl_channels_full.parquet"
 ]
     # "data/duckdb_mirror/tbl_vw_playlistfull.parquet",
 # "data/duckdb_mirror/tbl_playlists.parquet",

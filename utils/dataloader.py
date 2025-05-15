@@ -85,11 +85,11 @@ def load_base_data():
     if APPMODE == "DEV":
         #local DevContainer path
         PARQUET_TABLES = {
-            "tbl_nerdalytics": "data/tbl_nerdalytics.parquet",
-            "tbl_slope_full": "data/tbl_slope_full.parquet",
-            "tbl_playlist_full_dedup": "data/tbl_playlist_full_dedup.parquet",
-            "tbl_analytics_filters": "data/tbl_analytics_filters.parquet",
-            "tbl_channels": "data/tbl_channels.parquet"
+            "tbl_nerdalytics": "/app/data/tbl_nerdalytics.parquet",
+            "tbl_slope_full": "/app/data/tbl_slope_full.parquet",
+            "tbl_playlist_full_dedup": "/app/data/tbl_playlist_full_dedup.parquet",
+            "tbl_analytics_filters": "/app/data/tbl_analytics_filters.parquet",
+            "tbl_channels": "/app/data/tbl_channels_full.parquet"
         }
     else:
         #remote prod path
@@ -98,7 +98,7 @@ def load_base_data():
             "tbl_slope_full": "data/tbl_slope_full.parquet",
             "tbl_playlist_full_dedup": "data/tbl_playlist_full_dedup.parquet",
             "tbl_analytics_filters": "data/tbl_analytics_filters.parquet",
-            "tbl_channels": "data/tbl_channels.parquet"
+            "tbl_channels": "data/tbl_channels_full.parquet"
         }
 
     # Load all dataframes
@@ -164,13 +164,13 @@ def load_base_data():
     df_playlist_full_dedup = deduplicate_playlist_data(df_playlist_full_dedup)
 
     # Return a dictionary of all dataframes
-    return {
+    return  {
         "tbl_nerdalytics": df_nerdalytics,
         "tbl_slope_full": df_slope_full,
         "tbl_playlist_full_dedup": df_playlist_full_dedup,
         "tbl_analytics_filters": df_analytics_filters,
         "tbl_channels": df_channels,
-        "tbl_vw_playlist": df_playlist_full_dedup  # Deprecated alias
+        # "tbl_vw_playlist": df_playlist_full_dedup  # Deprecated alias
     }
 
 @st.cache_data(ttl='15m')

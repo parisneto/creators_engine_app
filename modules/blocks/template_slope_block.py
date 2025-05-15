@@ -41,7 +41,7 @@ def template_slope_block(df_nerdalytics, filter_manager):
 
     # Show dataframe info
     st.write(f"filtered_df_slope dataframe shape: {filtered_df_slope.shape}")
-    st.write(f"filtered_df_slope columns: {filtered_df_slope.columns}")
+    st.code(f"filtered_df_slope columns: {filtered_df_slope.columns}")
 
     # Show sample data
     with st.expander("Sample Data"):
