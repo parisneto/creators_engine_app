@@ -56,34 +56,41 @@ def load_base_data():
             "tbl_channels": "data/tbl_channels_full.parquet",
         }
 
-    # Load all dataframes
+    # ------------------------------
+    # SECTION 1: Load all dataframes
+    # ------------------------------
     df_nerdalytics = read_parquet_local(PARQUET_TABLES["tbl_nerdalytics"])
     df_slope_full = read_parquet_local(PARQUET_TABLES["tbl_slope_full"])
-    df_playlist_full_dedup = read_parquet_local(
-        PARQUET_TABLES["tbl_playlist_full_dedup"]
-    )
+    df_playlist_full_dedup = read_parquet_local(PARQUET_TABLES["tbl_playlist_full_dedup"])
     df_analytics_filters = read_parquet_local(PARQUET_TABLES["tbl_analytics_filters"])
     df_channels = read_parquet_local(PARQUET_TABLES["tbl_channels"])
 
-    # Convert date columns
+    # ---------------------------------------------------
+    # SECTION 2: Per-DF Date/Datetime Conversion (Primary)
+    # ---------------------------------------------------
+    # df_slope_full: Convert date columns
     if "slope_date" in df_slope_full.columns:
-        df_slope_full["slope_date"] = pd.to_datetime(
-            df_slope_full["slope_date"], errors="coerce"
-        )
+        df_slope_full["slope_date"] = pd.to_datetime(df_slope_full["slope_date"], errors="coerce")
     if "slope_timestamp" in df_slope_full.columns:
-        df_slope_full["slope_timestamp"] = pd.to_datetime(
-            df_slope_full["slope_timestamp"], errors="coerce"
-        )
+        df_slope_full["slope_timestamp"] = pd.to_datetime(df_slope_full["slope_timestamp"], errors="coerce")
     if "published_at" in df_slope_full.columns:
-        df_slope_full["published_at"] = pd.to_datetime(
-            df_slope_full["published_at"], errors="coerce"
-        )
-    if "published_at" in df_nerdalytics.columns:
-        df_nerdalytics["published_at"] = pd.to_datetime(
-            df_nerdalytics["published_at"], errors="coerce"
-        )
+        df_slope_full["published_at"] = pd.to_datetime(df_slope_full["published_at"], errors="coerce")
 
-    # Process all timestamp columns
+    # df_nerdalytics: Convert date columns
+    if "published_at" in df_nerdalytics.columns:
+        df_nerdalytics["published_at"] = pd.to_datetime(df_nerdalytics["published_at"], errors="coerce")
+
+    # df_playlist_full_dedup: Convert date columns
+    if "playlist_item_published_at" in df_playlist_full_dedup.columns:
+        df_playlist_full_dedup["playlist_item_published_at"] = pd.to_datetime(df_playlist_full_dedup["playlist_item_published_at"], errors="coerce")
+    if "playlist_published_at" in df_playlist_full_dedup.columns:
+        df_playlist_full_dedup["playlist_published_at"] = pd.to_datetime(df_playlist_full_dedup["playlist_published_at"], errors="coerce")
+    if "video_added_at" in df_playlist_full_dedup.columns:
+        df_playlist_full_dedup["video_added_at"] = pd.to_datetime(df_playlist_full_dedup["video_added_at"], errors="coerce")
+
+    # ------------------------------------------------------
+    # SECTION 3: Universal Timestamp Conversion (All DFs)
+    # ------------------------------------------------------
     timestamp_columns = [
         "processing_timestamp",
         "video_processing_timestamp",
@@ -95,36 +102,24 @@ def load_base_data():
         "video_added_at",
         "inserted_at",
     ]
-
-    # Apply datetime conversion to all dataframes for any timestamp columns
-    for df in [
-        df_nerdalytics,
-        df_slope_full,
-        df_playlist_full_dedup,
-        df_analytics_filters,
-    ]:
+    for df in [df_nerdalytics, df_slope_full, df_playlist_full_dedup, df_analytics_filters]:
         for col in timestamp_columns:
             if col in df.columns:
                 # For columns that might cause Arrow serialization issues, convert to string
-                if col in [
-                    "video_processing_timestamp",
-                    "video_statistics_processing_timestamp",
-                ]:
+                if col in ["video_processing_timestamp", "video_statistics_processing_timestamp"]:
                     df[col] = df[col].astype(str)
                 else:
                     df[col] = pd.to_datetime(df[col], errors="coerce")
 
-    # Fix for Streamlit Arrow serialization errors
-    if "video_processing_timestamp" in df_nerdalytics.columns:
-        df_nerdalytics["video_processing_timestamp"] = df_nerdalytics[
-            "video_processing_timestamp"
-        ].astype(str)
-    if "video_statistics_processing_timestamp" in df_nerdalytics.columns:
-        df_nerdalytics["video_statistics_processing_timestamp"] = df_nerdalytics[
-            "video_statistics_processing_timestamp"
-        ].astype(str)
-
-    # Ensure all ID columns are always treated as string to prevent type conversion issues
+    # ------------------------------------------------------
+    # SECTION 4: Ensure all relevant columns are strings (Arrow serialization & ID normalization)
+    # ------------------------------------------------------
+    # Columns that need to be string for Arrow/Streamlit serialization issues
+    arrow_string_columns = [
+        "video_processing_timestamp",
+        "video_statistics_processing_timestamp",
+    ]
+    # Columns that should always be strings for ID normalization and consistency
     id_columns = [
         "channel_id",
         "video_id",
@@ -133,18 +128,33 @@ def load_base_data():
         "playlist_unique_item_id",
         "category_id",
     ]
-    # FIX: (df_nerdalytics["age_in_days"])) TO INT
-    # df_nerdalytics["age_in_days"] = df_nerdalytics["age_in_days"].astype(int)
-
-    for df in [
-        df_nerdalytics,
-        df_slope_full,
-        df_playlist_full_dedup,
-        df_analytics_filters,
-    ]:
-        for col in id_columns:
+    # Combine all columns that need to be string
+    all_string_columns = set(arrow_string_columns + id_columns)
+    # Apply .astype(str) to all relevant columns in all DFs
+    for df in [df_nerdalytics, df_slope_full, df_playlist_full_dedup, df_analytics_filters]:
+        for col in all_string_columns:
             if col in df.columns:
+                # Arrow serialization fix or ID normalization
                 df[col] = df[col].astype(str)
+
+    # ------------------------------------------------------
+    # SECTION 6: Data Enrichment (Join Analytics Columns)
+    # ------------------------------------------------------
+    # Enrich df_playlist_full_dedup with selected analytics columns from df_nerdalytics by video_id
+    # Collect all ss_* columns from df_nerdalytics
+    ss_cols = [col for col in df_nerdalytics.columns if col.startswith('ss_')]
+    cols_to_add = [
+        'view_count', 'like_count', 'comment_count', 'video_type',
+        'duration_formatted_seconds', 'category_id', 'tags', 'default_audio_language'
+    ] + ss_cols
+    # Only add columns not already present in df_playlist_full_dedup
+    cols_missing = [col for col in cols_to_add if col not in df_playlist_full_dedup.columns]
+    merge_cols = ['video_id'] + [col for col in cols_to_add if col in df_nerdalytics.columns]
+    if 'video_id' in df_playlist_full_dedup.columns and 'video_id' in df_nerdalytics.columns:
+        df_playlist_full_dedup = df_playlist_full_dedup.merge(
+            df_nerdalytics[merge_cols], on='video_id', how='left', suffixes=('', '_analytics')
+        )
+    # else: if video_id missing, skip enrichment (df_playlist_full_dedup remains unchanged)
 
     # Return a dictionary of all dataframes
     return {
@@ -155,6 +165,7 @@ def load_base_data():
         "tbl_channels": df_channels,
         # "tbl_vw_playlist": df_playlist_full_dedup  # Deprecated alias
     }
+
 
 
 @st.cache_data(ttl="15m")

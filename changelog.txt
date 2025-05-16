@@ -1,5 +1,20 @@
-CreatorsEngine App v.0.1.2
-May 15th, 2025
+**CreatorsEngine App Changelog**
+
+
+
+CreatorsEngine App v.0.2.1
+May 16th, 2025
+- [Fixed] Deduplication of playlist data removed from dataloader.py
+- [Fixed] date filter now working in all DFs !
+- [Fixed] Ghost clicks on filters fixed.
+- [Change] dataloader.py : consolidated all type conversion and enrichments into a single section for each df.
+- [Added] df_playlist now enriched to have columns from df_nerdalytics like Safe Search and video_type.
+
+
+
+
+CreatorsEngine App v.0.2.0
+May 16th, 2025
 
 - [Change] Refactoring of filter_manager_v2.py to handle filters more flexibly and safely.
 - [Added] Bugs on 2nd click partilly returned after last changes.
