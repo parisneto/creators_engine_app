@@ -11,16 +11,17 @@ def render(df):
         return
     st.write(f"DataFrame shape: {df.shape}")
     st.write(f"Columns: {list(df.columns)}")
-    with st.expander("Sample Data"):
-        st.dataframe(df.head(10))
+    # with st.expander("Sample Data"):
+    # st.json(df.head(10).to_dict())
     # Example: Show counts for key columns
-    if "channel_title" in df.columns:
-        st.write(f"Unique Channels: {df['channel_title'].nunique()}")
-    if "video_type" in df.columns:
-        st.write(f"Video Types: {df['video_type'].unique().tolist()}")
+    if "playlist_channel_title" in df.columns:
+        st.write(f"Unique Channels: {df['playlist_channel_title'].nunique()}")
+    if "playlist_title" in df.columns:
+        st.write(f"Unique Playlists: {df['playlist_title'].nunique()}")
     if "default_audio_language" in df.columns:
         st.write(f"Languages: {df['default_audio_language'].unique().tolist()}")
     # Example plot (if plotly/matplotlib is available)
+
     if "video_type" in df.columns:
         import plotly.express as px
 

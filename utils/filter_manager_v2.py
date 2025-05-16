@@ -139,16 +139,37 @@ class FilterManager:
                                 max_value=max_val,
                                 key=widget_key,
                             )
-                        # Date range filter
-                        elif filter_type == "date_range":
+                        # Single-date filter
+                        elif filter_type == "date":
                             widget_key = f"{self.namespace}_{col_name}"
                             # Ensure the column is datetime
                             if col_name in dataframe.columns:
                                 dataframe[col_name] = pd.to_datetime(
                                     dataframe[col_name], errors="coerce"
                                 )
-                                min_date = dataframe[col_name].dt.date.min()
-                                max_date = dataframe[col_name].dt.date.max()
+                            # Render single date picker
+                            st.date_input(
+                                label,
+                                key=widget_key,
+                                value=st.session_state.get(widget_key),
+                                help=config.get("extra_params", {}).get("help"),
+                            )
+                        # Date range filter
+                        elif filter_type == "date_range":
+                            widget_key = f"{self.namespace}_{col_name}"
+                            # Ensure the column is datetime and determine min/max dates robustly
+                            if col_name in dataframe.columns:
+                                ts = pd.to_datetime(
+                                    dataframe[col_name], errors="coerce"
+                                )
+                                min_ts = ts.min()
+                                max_ts = ts.max()
+                                if pd.isna(min_ts) or pd.isna(max_ts):
+                                    min_date = datetime.date(2020, 1, 1)
+                                    max_date = datetime.date.today()
+                                else:
+                                    min_date = min_ts.date()
+                                    max_date = max_ts.date()
                             else:
                                 min_date = datetime.date(2020, 1, 1)
                                 max_date = datetime.date.today()
@@ -305,6 +326,14 @@ class FilterManager:
                     & (df_filtered[col_name] <= max_val)
                 ]
 
+            # elif filter_type == "date" and value is not None:
+            elif filter_type == "date" and isinstance(value, datetime.date):
+                # Filter for items on or after the selected date
+                df_filtered[col_name] = pd.to_datetime(
+                    df_filtered[col_name], errors="coerce"
+                )
+                df_filtered = df_filtered[df_filtered[col_name].dt.date >= value]
+
             elif filter_type == "date_range" and value is not None:
                 try:
                     # Handle date range - by this point, value should always be a tuple of (start_date, end_date)
@@ -392,7 +421,7 @@ def create_filter_config(df_name, df=None):
             },
             "published_at": {
                 "type": "date_range",
-                "label": "Published Date",
+                "label": "published_at",
                 "default": None,
                 "extra_params": {"help": "Filter videos by publication date"},
             },
@@ -442,14 +471,14 @@ def create_filter_config(df_name, df=None):
                 "extra_params": {"sort": True},
             },
             "playlist_item_published_at": {
-                "type": "date_range",
-                "label": "Published Date",
+                "type": "date",
+                "label": "playlist_item_published_at",
                 "default": None,
                 "extra_params": {"help": "Filter by when items were published"},
             },
             "video_added_at": {
-                "type": "date_range",
-                "label": "Added Date",
+                "type": "date",
+                "label": "video_added_at",
                 "default": None,
                 "extra_params": {
                     "help": "Filter by when videos were added to playlists"
@@ -482,11 +511,17 @@ def create_filter_config(df_name, df=None):
                     df["playlist_title"].dropna().unique().tolist()
                 )
 
-            # Set full-range defaults for date filters so they include all data initially
-            for date_col in ["playlist_item_published_at", "video_added_at"]:
-                if date_col in config and date_col in df.columns:
-                    series = pd.to_datetime(df[date_col], errors="coerce").dt.date
-                    config[date_col]["default"] = (series.min(), series.max())
+            # # Set full-range defaults for date filters so they include all data initially
+            # for date_col in ["playlist_item_published_at", "video_added_at"]:
+            #     if date_col in config and date_col in df.columns:
+            #         ts = pd.to_datetime(df[date_col], errors="coerce")
+            #         min_ts = ts.min()
+            #         max_ts = ts.max()
+            #         if pd.isna(min_ts) or pd.isna(max_ts):
+            #             default_range = None
+            #         else:
+            #             default_range = (min_ts.date(), max_ts.date())
+            #         config[date_col]["default"] = default_range
 
         return config
     # Add more configurations for other DataFrames as needed
