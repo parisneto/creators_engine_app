@@ -10,5 +10,6 @@ seaborn>=0.13.2
 matplotlib>=3.10.1
 orjson>=3.10.17
 statsmodels>=0.14.4
+openai>=1.79.0
 # altair>=5.5.0
 # altair-viewer>=0.4.0
