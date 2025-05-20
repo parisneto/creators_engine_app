@@ -46,8 +46,8 @@ level = "info"
 
 
 [client]
-# showErrorDetails = "full"
-showErrorDetails = "none"
+showErrorDetails = "full"
+#showErrorDetails = "none"
 
 [runner]
 

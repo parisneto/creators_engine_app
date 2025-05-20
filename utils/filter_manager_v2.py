@@ -464,6 +464,12 @@ def create_filter_config(df_name, df=None):
                     "placeholder": "Choose one or more playlists",
                 },
             },
+            "video_type": {
+                "type": "segmented",  # Changed to segmented for better UX
+                "label": "Video Type",
+                "default": None,
+                "extra_params": {"help": "Filter by video type"},
+            },
             "default_audio_language": {
                 "type": "multiselect",
                 "label": "Language",
