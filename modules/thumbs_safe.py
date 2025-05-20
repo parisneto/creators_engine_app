@@ -11,10 +11,13 @@
 
 import base64
 import logging
-import math
+import os
 import tempfile
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 from pathlib import Path
-from typing import Dict, Any
 
 import numpy as np
 import openai
@@ -111,6 +114,9 @@ def analyze_with_second_api(image_content: bytes) -> dict:
     Returns:
         dict: Analysis results from OpenAI
     """
+    # Initialize variables at function scope
+    temp_path = None
+
     try:
         # Save image to a temporary file
         with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
@@ -120,45 +126,107 @@ def analyze_with_second_api(image_content: bytes) -> dict:
         # Encode the image to base64
         b64_image = base64.b64encode(Path(temp_path).read_bytes()).decode("utf-8")
 
-        # Initialize OpenAI client
-        client = openai.OpenAI()
+        # Debug: Log environment variables
+        logger.debug(f"Environment variables: {dict(os.environ)}")
 
-        # Call the moderation API
-        moderation_result = client.moderations.create(
-            model="omni-moderation-2024-09-26",
-            input=[
-                {
-                    "type": "image_url",
-                    "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"},
-                }
-            ],
+        # Get API key from environment
+        api_key = os.getenv("OPENAI_API_KEY")
+        logger.debug(
+            f"API key from environment: {'*' * 10 + api_key[-4:] if api_key else 'Not found'}"
         )
+        logger.info(
+            f"OpenAI key (len={len(api_key) if api_key else 0}): {repr(api_key[:8]) if api_key else ''}...{repr(api_key[-8:]) if api_key else ''}"
+        )
+
+        if not api_key:
+            error_msg = "OpenAI API key not found in environment. Set the OPENAI_API_KEY environment variable."
+            logger.error(error_msg)
+            return {"status": "error", "message": error_msg}
+
+        # Minimal test: try a basic moderation call
+        try:
+            client = openai.OpenAI(api_key=api_key, timeout=30.0)
+            logger.info("Testing OpenAI moderation API with minimal input...")
+            minimal_test = client.moderations.create(input="test")
+            logger.info(f"Minimal moderation API test succeeded: {minimal_test}")
+        except Exception as e:
+            logger.error(f"Minimal OpenAI moderation API test failed: {e}")
+            return {
+                "status": "error",
+                "message": f"Minimal OpenAI moderation API test failed: {e}",
+            }
+
+        # Initialize OpenAI client with explicit API key and base URL
+        try:
+            logger.debug("Initializing OpenAI client...")
+            # client = openai.OpenAI(
+            #     api_key=api_key,
+            #     timeout=30.0,  # Add timeout to avoid hanging
+            # )
+            # Initialize OpenAI client
+            client = openai.OpenAI()
+            logger.debug("OpenAI client initialized successfully")
+
+            # Call the moderation API
+            logger.debug("Calling OpenAI moderation API...")
+            moderation_result = client.moderations.create(
+                model="omni-moderation-2024-09-26",
+                input=[
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"},
+                    }
+                ],
+            )
+            logger.debug("Received response from OpenAI API")
+
+        except openai.AuthenticationError as auth_err:
+            logger.error(f"OpenAI Authentication Error: {str(auth_err)}")
+            raise  # Re-raise to be caught by the outer exception handler
+        except Exception as e:
+            logger.error(f"Error initializing OpenAI client or calling API: {str(e)}")
+            raise  # Re-raise to be caught by the outer exception handler
 
         # Convert result to dict for JSON serialization
         result_dict = moderation_result.model_dump()
-        
+
         # Filter out text-only categories
         if result_dict and "results" in result_dict.get("data", {}):
             for result in result_dict["data"]["results"]:
                 if "categories" in result:
                     result["categories"] = {
-                        k: v for k, v in result["categories"].items()
+                        k: v
+                        for k, v in result["categories"].items()
                         if k not in TEXT_ONLY_CATEGORIES
                     }
                 if "category_scores" in result:
                     result["category_scores"] = {
-                        k: v for k, v in result["category_scores"].items()
+                        k: v
+                        for k, v in result["category_scores"].items()
                         if k not in TEXT_ONLY_CATEGORIES
                     }
 
-        # Clean up temporary file
-        Path(temp_path).unlink(missing_ok=True)
+        return {
+            "status": "success",
+            "data": result_dict,
+            "model": "omni-moderation-2024-09-26",
+        }
 
-        return {"status": "success", "data": result_dict}
-
+    except openai.AuthenticationError as e:
+        error_msg = "Authentication failed. Please check your OpenAI API key."
+        logger.error(f"{error_msg} Error: {str(e)}")
+        return {"status": "error", "message": error_msg}
     except Exception as e:
-        logger.error(f"Error in OpenAI moderation: {str(e)}", exc_info=True)
-        return {"status": "error", "message": str(e)}
+        error_msg = f"Error in OpenAI moderation: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return {"status": "error", "message": error_msg}
+    finally:
+        # Clean up temporary file if it was created
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.unlink(temp_path)
+            except Exception as e:
+                logger.error(f"Error cleaning up temp file {temp_path}: {str(e)}")
 
 
 def display_analysis_results(results, is_reprocessed=False):
@@ -229,13 +297,41 @@ def display_openai_results(results, use_log_scale: bool = False):
         results (dict): Resultados da análise da API
         use_log_scale (bool): Se True, usa escala logarítmica para a barra de progresso
     """
-    if "data" not in results:
-        st.warning("Dados de análise não encontrados na resposta.")
+    # Debug: Show raw results for troubleshooting
+    with st.expander("Debug: Raw API Response"):
+        st.json(results)
+
+    # Check if we have valid results in different possible structures
+    if not results or "status" not in results:
+        st.warning("Resposta inválida da API.")
+        return
+
+    if results.get("status") != "success":
+        st.error(f"Erro na API: {results.get('message', 'Erro desconhecido')}")
         return
 
     try:
-        # Get the moderation results
-        res = results["data"]["results"][0]
+        # Get the moderation results - handle different possible response structures
+        if (
+            "data" in results
+            and "results" in results["data"]
+            and results["data"]["results"]
+        ):
+            res = results["data"]["results"][0]
+        elif "results" in results and results["results"]:
+            res = results["results"][0]
+        else:
+            st.warning("Estrutura de dados inesperada na resposta da API.")
+            return
+
+        if (
+            not isinstance(res, dict)
+            or "categories" not in res
+            or "category_scores" not in res
+        ):
+            st.warning("Dados de análise incompletos na resposta.")
+            return
+
         categories = res["categories"]
         scores = res["category_scores"]
 
@@ -253,33 +349,36 @@ def display_openai_results(results, use_log_scale: bool = False):
         for category, is_flagged in categories.items():
             risk_score = scores.get(category, 0)
             safety_score = 1 - risk_score  # Convert to safety score (0-1)
-            table_data.append({
-                "Categoria": category.replace("_", " ").title(),
-                "Status": "✅ Aprovado" if not is_flagged else "❌ Sinalizado",
-                "Risco (%)": risk_score * 100,  # Store as percentage
-                "Segurança (%)": safety_score * 100  # Store as percentage
-            })
+            table_data.append(
+                {
+                    "Categoria": category.replace("_", " ").title(),
+                    "Status": "✅ Aprovado" if not is_flagged else "❌ Sinalizado",
+                    "Risco (%)": risk_score * 100,  # Store as percentage
+                    "Segurança (%)": safety_score * 100,  # Store as percentage
+                }
+            )
 
         # Sort by risk score descending
         table_data.sort(key=lambda x: x["Risco (%)"], reverse=True)
-        
+
         # Create DataFrames for both views
         df_detailed = pd.DataFrame(table_data)
-        
+
         # --- Detailed View ---
         st.subheader("Análise Detalhada", divider="rainbow")
-        
+
         # Apply styling for the detailed view
         def highlight_flagged(val):
-            return 'background-color: #ffdddd' if val == "❌ Sinalizado" else ''
-        
+            return "background-color: #ffdddd" if val == "❌ Sinalizado" else ""
+
         # Create a copy of the detailed view without the safety score
         df_detailed_view = df_detailed.drop(columns=["Segurança (%)"]).copy()
-        
+
         # Fixed scale for better color comparison (0% to 10%)
         styled_df = (
-            df_detailed_view.style
-            .apply(lambda x: [highlight_flagged(val) for val in x], subset=["Status"])
+            df_detailed_view.style.apply(
+                lambda x: [highlight_flagged(val) for val in x], subset=["Status"]
+            )
             .background_gradient(
                 subset=["Risco (%)"],
                 cmap="PuBu",
@@ -288,32 +387,30 @@ def display_openai_results(results, use_log_scale: bool = False):
             )
             .format({"Risco (%)": "{:.2f}%"})
         )
-        
-        st.dataframe(
-            styled_df,
-            use_container_width=True,
-            hide_index=True
-        )
-        
+
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
         # Show warning if any category is flagged
         if flagged:
-            st.warning("⚠️ Este conteúdo contém elementos que podem ser considerados inadequados.")
-        
+            st.warning(
+                "⚠️ Este conteúdo contém elementos que podem ser considerados inadequados."
+            )
+
         # --- Summary View ---
         st.divider()
         st.subheader("Visão Resumida", divider="rainbow")
-        
+
         # Calculate max value for scaling
         max_risk = max(x["Risco (%)"] for x in table_data) if table_data else 10
-        
+
         # Apply log scale if requested
         if use_log_scale and max_risk > 0:
             # Add small epsilon to avoid log(0)
             log_scale = np.log10(max_risk + 0.0001) + 1
-            max_scale = 10 ** log_scale
+            max_scale = 10**log_scale
         else:
             max_scale = max(10, max_risk)  # Minimum scale of 10%
-        
+
         # Display the table with progress bars
         st.dataframe(
             df_detailed.rename(columns={"Risco (%)": "Risco"}),
@@ -329,9 +426,9 @@ def display_openai_results(results, use_log_scale: bool = False):
                 ),
             },
             hide_index=True,
-            use_container_width=True
+            use_container_width=True,
         )
-        
+
         # Show current scale info
         scale_type = "logarítmica" if use_log_scale else "linear"
         st.caption(f"Escala: {scale_type} | Máximo risco: {max_risk:.2f}%")

@@ -12,7 +12,9 @@ services:
       - "8501:8501"
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
-
+      - OPENAI_API_KEY=/root/.z_Do_Not_Sync_or_use/openaikey.secret
+    secrets:
+      - openaikey.secret
   prod:
     build:
       context: .

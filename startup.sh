@@ -18,6 +18,15 @@ echo "--- Starting Streamlit ---"
 
 # temporary test
 #export OPENAI_API_KEY="sk-proj-vkPn5AOFHOCd  EXAMPLE ADD TO ENV or Dockerfile etc..
+# Secret created :
+# projects/948268285269/secrets/creators-engine-openai-apikey
+# Secrete Reference :
+# projects/fleet-gamma-448616-m1/secrets/creators-engine-openai-apikey/versions/latest
+# gcloud run deploy YOUR_SERVICE_NAME \
+#   --image YOUR_IMAGE \
+#   --platform managed \
+#   --region YOUR_REGION \
+#   --set-secrets OPENAI_API_KEY=projects/fleet-gamma-448616-m1/secrets/creators-engine-openai-apikey/versions/latest
 
 
 # exec streamlit run main.py

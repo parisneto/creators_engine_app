@@ -15,24 +15,27 @@ To create a new page:
 3. Add/remove blocks in PAGE_BLOCKS.
 4. (Optional) Import shared data, filters, or external blocks as needed.
 """
-import streamlit as st
-import pandas as pd
-import subprocess, os
-from typing import Callable, List, Dict
-from utils.page_framework import render_page
-from utils.dataretriever import main as dataretriever_main
-from utils.auth import SHOW_DEBUG_INFO
-from utils.dataloader import load_data
+
 import gc
-import plotly.express as px
+import os
+import subprocess
 from datetime import datetime, timezone
+from typing import Callable, Dict, List
+
+import pandas as pd
+import plotly.express as px
+import streamlit as st
 
 # ---- Example External Block Import ----
 # from modules.blocks.hello_block import hello_block  # External block example
 from modules.blocks.debugtools1 import debugtools1  # External block example
-from modules.blocks.debugtools3 import debugtools3  # External block example
-from modules.blocks.debugtools4 import debugtools4  # External block example
-from modules.blocks.fileman import fileman  # External block example
+from modules.blocks.debugtools3 import debugtools3  # Internal block example
+from modules.blocks.debugtools4 import debugtools4  # Internal block example
+from modules.blocks.fileman import fileman  # Internal block example
+from utils.auth import SHOW_DEBUG_INFO
+from utils.dataloader import load_data
+from utils.dataretriever import main as dataretriever_main
+from utils.page_framework import render_page
 
 
 # ---- Example Local Block Function ----
@@ -40,8 +43,6 @@ def intro_block():
     """A simple local block for demonstration."""
     st.header("Intro Block")
     st.write("This is a local block for Playlists")
-
-    import  stat
 
     DATA_DIR = "/app/data"
 
@@ -55,12 +56,10 @@ def intro_block():
     # st.write("• / (root) contents:", os.listdir("/"))
     # st.write("• This file path:", __file__)
 
-
     st.button("Reset Cache", on_click=st.cache_data.clear)
     st.button("🔄 Force GC", on_click=gc.collect)
 
     st.divider()
-
 
     st.error("DO NOT CLICK THIS:", icon="🚨")
 
@@ -68,22 +67,24 @@ def intro_block():
 
     if st.button("Run Data Retriever 2 (subprocess)"):
         result = subprocess.run(
-            ["python", "utils/dataretriever.py"],
-            capture_output=True,
-            text=True
+            ["python", "utils/dataretriever.py"], capture_output=True, text=True
         )
         st.write("**Return code:**", result.returncode)
         st.write("**Stdout:**", result.stdout or "_(none)_")
         st.write("**Stderr:**", result.stderr or "_(none)_")
         st.write("**Local files now in**", DATA_DIR, ":", os.listdir(DATA_DIR))
 
-    if  SHOW_DEBUG_INFO:
+    if SHOW_DEBUG_INFO:
         st.divider()
         st.write("• CWD:", os.getcwd())
         st.write("• EXISTS:", os.path.exists(DATA_DIR))
         st.write("• IS DIR:", os.path.isdir(DATA_DIR))
-        st.write("• PERMS:", oct(os.stat(DATA_DIR).st_mode)[-3:],
-                    "(writable?)", os.access(DATA_DIR, os.W_OK))
+        st.write(
+            "• PERMS:",
+            oct(os.stat(DATA_DIR).st_mode)[-3:],
+            "(writable?)",
+            os.access(DATA_DIR, os.W_OK),
+        )
         st.write("• /app contents:", os.listdir("/app"))
 
     st.divider()
@@ -95,6 +96,7 @@ def intro_block():
     if st.button("Run Data Retriever (import)"):
         dataretriever_main()
         st.write("Data Retriever executed via import!")
+
 
 # ---- Example Local Block Function ----
 def debugtools2():
@@ -112,20 +114,35 @@ def debugtools2():
     # st.write("df_channels_sample : ")
     # st.divider()
 
+    # radar plot
 
-
-    #radar plot
-
-
-    df_channels_sample = df_channels[['snippet_custom_url', 'channel_title', 'description', 'channel_custom_url',  'view_count', 'subscriber_count', 'video_count', 'country', 'channel_id', 'channel_published_at']].copy()
+    df_channels_sample = df_channels[
+        [
+            "snippet_custom_url",
+            "channel_title",
+            "description",
+            "channel_custom_url",
+            "view_count",
+            "subscriber_count",
+            "video_count",
+            "country",
+            "channel_id",
+            "channel_published_at",
+        ]
+    ].copy()
     # st.code(df_channels_sample.columns.tolist())
     # st.dataframe(df_channels_sample)
     # st.divider()
 
     # Calculate years since published (1 decimal)
     now = datetime(2025, 5, 12, tzinfo=timezone.utc)
-    df_channels_sample['channel_published_at'] = pd.to_datetime(df_channels_sample['channel_published_at'], utc=True, errors='coerce')
-    df_channels_sample['years_since_published'] = ((now - df_channels_sample['channel_published_at']).dt.total_seconds() / (365.25*24*3600)).round(1)
+    df_channels_sample["channel_published_at"] = pd.to_datetime(
+        df_channels_sample["channel_published_at"], utc=True, errors="coerce"
+    )
+    df_channels_sample["years_since_published"] = (
+        (now - df_channels_sample["channel_published_at"]).dt.total_seconds()
+        / (365.25 * 24 * 3600)
+    ).round(1)
 
     # st.write("df_channels_sample : ")
 
@@ -137,7 +154,12 @@ def debugtools2():
     # console.log(df_channels_sample)
     st.divider()
     # Define metrics to normalize
-    radar_metrics = ['view_count', 'subscriber_count', 'video_count', 'years_since_published']
+    radar_metrics = [
+        "view_count",
+        "subscriber_count",
+        "video_count",
+        "years_since_published",
+    ]
 
     # Min-max normalization
     df_norm = df_channels_sample.copy()
@@ -151,24 +173,26 @@ def debugtools2():
 
     # Melt the normalized dataframe
     df_radar = df_norm.melt(
-        id_vars=['snippet_custom_url'],
+        id_vars=["snippet_custom_url"],
         value_vars=radar_metrics,
-        var_name='Metric',
-        value_name='Value'
+        var_name="Metric",
+        value_name="Value",
     )
 
     # Plot as before
     fig = px.line_polar(
         df_radar,
-        r='Value',
-        theta='Metric',
-        color='snippet_custom_url',
+        r="Value",
+        theta="Metric",
+        color="snippet_custom_url",
         line_close=True,
-        template='plotly_dark',
-        markers=True
+        template="plotly_dark",
+        markers=True,
     )
-    fig.update_traces(fill='toself', opacity=0.4)
-    fig.update_layout(title="Channel Metrics Radar Plot (Normalized)", legend_title_text='Channel')
+    fig.update_traces(fill="toself", opacity=0.4)
+    fig.update_layout(
+        title="Channel Metrics Radar Plot (Normalized)", legend_title_text="Channel"
+    )
     st.plotly_chart(fig, use_container_width=True)
 
     # # Prepare data for radar plot
@@ -196,10 +220,7 @@ def debugtools2():
     # st.plotly_chart(fig, use_container_width=True)
 
 
-
-
 def debugtools5():
-
     from utils.config import APPMODE
 
     st.header("APP MODE :")
@@ -209,19 +230,96 @@ def debugtools5():
     st.write("This is a local block for Debugtools4")
 
     st.subheader("Debian Version")
-    process = subprocess.run(["cat", "/etc/debian_version"],
-                            capture_output=True, text=True)
+    process = subprocess.run(
+        ["cat", "/etc/debian_version"], capture_output=True, text=True
+    )
     st.code(process.stdout)
     st.subheader("OS Release")
-    process = subprocess.run(["cat", "/etc/os-release"],
-                            capture_output=True, text=True)
+    process = subprocess.run(["cat", "/etc/os-release"], capture_output=True, text=True)
     st.code(process.stdout)
 
     st.subheader("System Info")
-    process = subprocess.run(["uname", "-a"],
-                            capture_output=True, text=True)
+    process = subprocess.run(["uname", "-a"], capture_output=True, text=True)
     st.code(process.stdout)
 
+
+def debugtools6():
+    st.header("Debugtools6 Block")
+    st.write("This is a local block for Debugtools6")
+
+    st.title("Environment Variable Viewer")
+
+    st.header("1. Displaying a Specific Environment Variable (OPENAI_API_KEY)")
+
+    # Get a specific environment variable
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
+    if openai_api_key:
+        st.code(
+            f"**OPENAI_API_KEY:** `{openai_api_key[:5]}...{openai_api_key[-5:]}`"
+            # f"\n\n**OPENAI_API_KEY FULL:** `{openai_api_key}`"
+            # f"\n\n**OPENAI_API_KEY len:** `{len(openai_api_key)}`"
+        )  # Display partially for security
+        st.info("Note: Only showing first/last 5 characters for security reasons.")
+    else:
+        st.warning("`OPENAI_API_KEY` is not set in the environment.")
+
+    st.markdown("---")
+
+    st.header("2. Displaying All Environment Variables")
+
+    # Get all environment variables
+    all_env_vars = os.environ
+
+    if all_env_vars:
+        st.write("### All Environment Variables (Sensitive data may be present!)")
+        st.warning(
+            "Caution: Displaying all environment variables can expose sensitive information. Use with care, especially in public deployments."
+        )
+
+        # Sort for better readability
+        sorted_env_vars = sorted(all_env_vars.items())
+
+        # You can choose how to display them:
+
+        # Option A: As a dictionary (simple, but can be long)
+        # st.json(dict(sorted_env_vars))
+
+        # Create two columns for Key and Value
+        col1, col2 = st.columns([1, 2])  # Adjust column ratio if needed
+
+        # Write headers to columns
+        with col1:
+            st.markdown("**Key**")
+            st.markdown("---")
+        with col2:
+            st.markdown("**Value**")
+            st.markdown("---")
+
+        # Populate columns with environment variables
+        for key, value in sorted_env_vars:
+            # For security, you might want to mask sensitive values like API keys
+            display_value = value
+            if (
+                "API_KEY" in key.upper()
+                or "PASSWORD" in key.upper()
+                or "SECRET" in key.upper()
+            ):
+                display_value = (
+                    f"{value[:3]}...{value[-3:]}" if len(value) > 6 else "***"
+                )
+
+            with col1:
+                st.code(key, language="text")  # Use st.code for mono-spaced font
+            with col2:
+                st.code(display_value, language="text")
+    else:
+        st.info("No environment variables found.")
+
+    st.markdown("---")
+    st.caption(
+        "Environment variables are typically set outside the Python script (e.g., in your shell, .env file, or deployment platform settings)."
+    )
 
 
 # ---- Configurable Block List ----
@@ -233,7 +331,9 @@ PAGE_BLOCKS: List[Dict[str, Callable]] = [
     {"name": "3 debugtools3", "func": debugtools3},
     {"name": "4 DF inspector", "func": debugtools4},
     {"name": "5 OS Version", "func": debugtools5},
+    {"name": "6 Env Variables", "func": debugtools6},
 ]
+
 
 # ---- Required Entrypoint ----
 def render():
@@ -243,6 +343,7 @@ def render():
     """
     # st.title("Template Page Example")
     render_page(PAGE_BLOCKS)
+
 
 if __name__ == "__main__":
     render()
