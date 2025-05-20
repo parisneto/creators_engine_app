@@ -15,5 +15,11 @@ echo "--- Data retriever script finished ---"
 # This ensures signals (like SIGTERM from Cloud Run) are passed correctly.
 echo "--- Starting Streamlit ---"
 # CMD ["/opt/python/bin/streamlit", "run", "main.py", "--server.port=8080", "--server.address=0.0.0.0", "--server.enableCORS=false", "--server.enableXsrfProtection=false"]
+
+# temporary test
+export OPENAI_API_KEY="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"
+
+
+
 # exec streamlit run main.py
 exec streamlit run main.py --server.port=8080 --server.address=0.0.0.0 --server.enableCORS=false --server.enableXsrfProtection=false

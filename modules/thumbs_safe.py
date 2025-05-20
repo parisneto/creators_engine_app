@@ -9,8 +9,15 @@
 # 2024-03-27: Página principal do Computer Vision AI
 """
 
+import base64
 import logging
+import math
+import tempfile
+from pathlib import Path
 
+import numpy as np
+import openai
+import pandas as pd
 import requests
 import streamlit as st
 from google.cloud import vision_v1
@@ -80,6 +87,233 @@ def fetch_image_from_url(url: str) -> bytes:
     response = requests.get(url)
     response.raise_for_status()
     return response.content
+
+
+def analyze_with_second_api(image_content: bytes) -> dict:
+    """
+    Analyze image using OpenAI's Moderation API.
+
+    Args:
+        image_content (bytes): Image content to analyze
+
+    Returns:
+        dict: Analysis results from OpenAI
+    """
+    try:
+        # Save image to a temporary file
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as temp_file:
+            temp_path = temp_file.name
+            temp_file.write(image_content)
+
+        # Encode the image to base64
+        b64_image = base64.b64encode(Path(temp_path).read_bytes()).decode("utf-8")
+
+        # Initialize OpenAI client
+        client = openai.OpenAI()
+
+        # Call the moderation API
+        moderation_result = client.moderations.create(
+            model="omni-moderation-2024-09-26",
+            input=[
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"},
+                }
+            ],
+        )
+
+        # Convert result to dict for JSON serialization
+        result_dict = moderation_result.model_dump()
+
+        # Clean up temporary file
+        Path(temp_path).unlink(missing_ok=True)
+
+        return {"status": "success", "data": result_dict}
+
+    except Exception as e:
+        logger.error(f"Error in OpenAI moderation: {str(e)}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
+def display_analysis_results(results, is_reprocessed=False):
+    """
+    Exibe os resultados da análise de imagem.
+
+    Args:
+        results (dict): Resultados da análise
+        is_reprocessed (bool): Se a imagem foi reprocessada
+    """
+    # Exibir resultados SafeSearch
+    st.subheader("Análise de Conteúdo Sensível", divider="rainbow")
+    if "safeSearchAnnotation" in results:
+        # Get the SafeSearch scores
+        safesearch_data = results["safeSearchAnnotation"]
+
+        # Map likelihood strings to numeric values using the same mapping from LIKELIHOOD_VALUES
+        scores = []
+        for category, likelihood in safesearch_data.items():
+            if likelihood in LIKELIHOOD_VALUES:
+                scores.append(LIKELIHOOD_VALUES[likelihood]["value"])
+
+        # Render the table
+        render_safesearch_table(safesearch_data)
+
+        # Add celebration effect based on scores
+        if any(score >= 3 for score in scores):
+            st.snow()
+            st.toast("Cuidado! Este thumbnail pode atrapalhar o seu vídeo!", icon="🚨")
+        else:
+            st.balloons()
+            st.toast("Ótimo! Este thumbnail pode ser bem aceito!", icon="😎")
+    else:
+        st.warning("Não foi possível realizar análise de conteúdo sensível.")
+
+    # Exibir Labels detectados
+    st.subheader("Elementos Encontrados", divider="rainbow")
+    if "labelAnnotations" in results:
+        # Não adicionar mais o label de reprocessamento
+        labels_to_show = list(results["labelAnnotations"])
+        render_labels_table(labels_to_show)
+    else:
+        st.warning("Não foi possível detectar elementos na imagem.")
+
+    # Display second API analysis
+    st.divider()
+    st.subheader("Teste - OpenAI Content Moderation API", divider="rainbow")
+
+    if st.session_state.image_content:
+        with st.spinner("Processando com 2a API..."):
+            try:
+                second_api_results = analyze_with_second_api(
+                    st.session_state.image_content
+                )
+                # st.json(second_api_results)
+                # or use a function :
+                display_openai_results(second_api_results)
+
+            except Exception as e:
+                st.error(f"Erro ao processar com a 2a API: {str(e)}")
+
+
+def display_openai_results(results, use_log_scale: bool = False):
+    """
+    Exibe os resultados da análise da OpenAI Moderation API.
+
+    Args:
+        results (dict): Resultados da análise da API
+        use_log_scale (bool): Se True, usa escala logarítmica para a barra de progresso
+    """
+    if "data" not in results:
+        st.warning("Dados de análise não encontrados na resposta.")
+        return
+
+    try:
+        # Get the moderation results
+        res = results["data"]["results"][0]
+        categories = res["categories"]
+        scores = res["category_scores"]
+
+        # Display flagged status
+        st.subheader("Status da Moderação", divider="rainbow")
+        flagged = res.get("flagged", False)
+        status_emoji = "❌" if flagged else "✅"
+        status_text = (
+            "Conteúdo sinalizado como inadequado" if flagged else "Conteúdo aprovado"
+        )
+        st.write(f"{status_emoji} **{status_text}**")
+
+        # Prepare data for the tables
+        table_data = []
+        for category, is_flagged in categories.items():
+            risk_score = scores.get(category, 0)
+            safety_score = 1 - risk_score  # Convert to safety score (0-1)
+            table_data.append({
+                "Categoria": category.replace("_", " ").title(),
+                "Status": "✅ Aprovado" if not is_flagged else "❌ Sinalizado",
+                "Risco (%)": risk_score * 100,  # Store as percentage
+                "Segurança (%)": safety_score * 100  # Store as percentage
+            })
+
+        # Sort by risk score descending
+        table_data.sort(key=lambda x: x["Risco (%)"], reverse=True)
+        
+        # Create DataFrames for both views
+        df_detailed = pd.DataFrame(table_data)
+        
+        # --- Detailed View ---
+        st.subheader("Análise Detalhada", divider="rainbow")
+        
+        # Apply styling for the detailed view
+        def highlight_flagged(val):
+            return 'background-color: #ffdddd' if val == "❌ Sinalizado" else ''
+        
+        # Create a copy of the detailed view without the safety score
+        df_detailed_view = df_detailed.drop(columns=["Segurança (%)"]).copy()
+        
+        # Fixed scale for better color comparison (0% to 10%)
+        styled_df = (
+            df_detailed_view.style
+            .apply(lambda x: [highlight_flagged(val) for val in x], subset=["Status"])
+            .background_gradient(
+                subset=["Risco (%)"],
+                cmap="PuBu",
+                vmin=0,
+                vmax=10,  # Fixed scale up to 10%
+            )
+            .format({"Risco (%)": "{:.2f}%"})
+        )
+        
+        st.dataframe(
+            styled_df,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Show warning if any category is flagged
+        if flagged:
+            st.warning("⚠️ Este conteúdo contém elementos que podem ser considerados inadequados.")
+        
+        # --- Summary View ---
+        st.divider()
+        st.subheader("Visão Resumida", divider="rainbow")
+        
+        # Calculate max value for scaling
+        max_risk = max(x["Risco (%)"] for x in table_data) if table_data else 10
+        
+        # Apply log scale if requested
+        if use_log_scale and max_risk > 0:
+            # Add small epsilon to avoid log(0)
+            log_scale = np.log10(max_risk + 0.0001) + 1
+            max_scale = 10 ** log_scale
+        else:
+            max_scale = max(10, max_risk)  # Minimum scale of 10%
+        
+        # Display the table with progress bars
+        st.dataframe(
+            df_detailed.rename(columns={"Risco (%)": "Risco"}),
+            column_config={
+                "Categoria": "Categoria",
+                "Status": "Status",
+                "Risco": st.column_config.ProgressColumn(
+                    "Segurança",
+                    help="Quanto maior a barra, mais seguro é o conteúdo",
+                    format="%.0f%%",
+                    min_value=0,
+                    max_value=100,  # Always show as percentage
+                ),
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+        
+        # Show current scale info
+        scale_type = "logarítmica" if use_log_scale else "linear"
+        st.caption(f"Escala: {scale_type} | Máximo risco: {max_risk:.2f}%")
+
+    except Exception as e:
+        st.error(f"Erro ao processar os resultados: {str(e)}")
+        with st.expander("Ver resposta bruta para depuração"):
+            st.json(results)
 
 
 def render():
@@ -263,51 +497,3 @@ def render():
                         logger.exception("Error processing image")
                         st.error(f"Erro ao processar imagem: {str(e)}")
                         return
-
-
-def display_analysis_results(results, is_reprocessed=False):
-    """
-    Exibe os resultados da análise de imagem.
-
-    Args:
-        results (dict): Resultados da análise
-        is_reprocessed (bool): Se a imagem foi reprocessada
-    """
-    # Exibir resultados SafeSearch
-    st.subheader("Análise de Conteúdo Sensível", divider="rainbow")
-    if "safeSearchAnnotation" in results:
-        # Get the SafeSearch scores
-        safesearch_data = results["safeSearchAnnotation"]
-
-        # Map likelihood strings to numeric values using the same mapping from LIKELIHOOD_VALUES
-        scores = []
-        for category, likelihood in safesearch_data.items():
-            if likelihood in LIKELIHOOD_VALUES:
-                scores.append(LIKELIHOOD_VALUES[likelihood]["value"])
-
-        # Render the table
-        render_safesearch_table(safesearch_data)
-
-        # Add celebration effect based on scores
-        if any(score >= 3 for score in scores):
-            st.snow()
-            st.toast("Cuidado! Este thumbnail pode atrapalhar o seu vídeo!", icon="🚨")
-        else:
-            st.balloons()
-            st.toast("Ótimo! Este thumbnail pode ser bem aceito!", icon="😎")
-    else:
-        st.warning("Não foi possível realizar análise de conteúdo sensível.")
-
-    # Exibir Labels detectados
-    st.subheader("Elementos Encontrados", divider="rainbow")
-    if "labelAnnotations" in results:
-        # Não adicionar mais o label de reprocessamento
-        labels_to_show = list(results["labelAnnotations"])
-        render_labels_table(labels_to_show)
-    else:
-        st.warning("Não foi possível detectar elementos na imagem.")
-
-    # # Exibir JSON bruto em expander
-    # st.divider()
-    # with st.expander("Ver JSON completo"):
-    #     st.json(results)
