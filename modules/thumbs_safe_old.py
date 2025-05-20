@@ -11,10 +11,8 @@
 
 import base64
 import logging
-import math
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
 
 import numpy as np
 import openai
@@ -23,17 +21,6 @@ import requests
 import streamlit as st
 from google.cloud import vision_v1
 from google.protobuf.json_format import MessageToDict
-
-# Categories that only support text inputs (no image support)
-TEXT_ONLY_CATEGORIES = [
-    "harassment",
-    "harassment/threatening",
-    "hate",
-    "hate/threatening",
-    "illicit",
-    "illicit/violent",
-    "sexual/minors",
-]
 
 from components.tables import render_labels_table, render_safesearch_table
 from utils.config import LIKELIHOOD_VALUES, YOUTUBE_THUMBNAIL_URL
@@ -136,20 +123,6 @@ def analyze_with_second_api(image_content: bytes) -> dict:
 
         # Convert result to dict for JSON serialization
         result_dict = moderation_result.model_dump()
-        
-        # Filter out text-only categories
-        if result_dict and "results" in result_dict.get("data", {}):
-            for result in result_dict["data"]["results"]:
-                if "categories" in result:
-                    result["categories"] = {
-                        k: v for k, v in result["categories"].items()
-                        if k not in TEXT_ONLY_CATEGORIES
-                    }
-                if "category_scores" in result:
-                    result["category_scores"] = {
-                        k: v for k, v in result["category_scores"].items()
-                        if k not in TEXT_ONLY_CATEGORIES
-                    }
 
         # Clean up temporary file
         Path(temp_path).unlink(missing_ok=True)
@@ -253,33 +226,36 @@ def display_openai_results(results, use_log_scale: bool = False):
         for category, is_flagged in categories.items():
             risk_score = scores.get(category, 0)
             safety_score = 1 - risk_score  # Convert to safety score (0-1)
-            table_data.append({
-                "Categoria": category.replace("_", " ").title(),
-                "Status": "✅ Aprovado" if not is_flagged else "❌ Sinalizado",
-                "Risco (%)": risk_score * 100,  # Store as percentage
-                "Segurança (%)": safety_score * 100  # Store as percentage
-            })
+            table_data.append(
+                {
+                    "Categoria": category.replace("_", " ").title(),
+                    "Status": "✅ Aprovado" if not is_flagged else "❌ Sinalizado",
+                    "Risco (%)": risk_score * 100,  # Store as percentage
+                    "Segurança (%)": safety_score * 100,  # Store as percentage
+                }
+            )
 
         # Sort by risk score descending
         table_data.sort(key=lambda x: x["Risco (%)"], reverse=True)
-        
+
         # Create DataFrames for both views
         df_detailed = pd.DataFrame(table_data)
-        
+
         # --- Detailed View ---
         st.subheader("Análise Detalhada", divider="rainbow")
-        
+
         # Apply styling for the detailed view
         def highlight_flagged(val):
-            return 'background-color: #ffdddd' if val == "❌ Sinalizado" else ''
-        
+            return "background-color: #ffdddd" if val == "❌ Sinalizado" else ""
+
         # Create a copy of the detailed view without the safety score
         df_detailed_view = df_detailed.drop(columns=["Segurança (%)"]).copy()
-        
+
         # Fixed scale for better color comparison (0% to 10%)
         styled_df = (
-            df_detailed_view.style
-            .apply(lambda x: [highlight_flagged(val) for val in x], subset=["Status"])
+            df_detailed_view.style.apply(
+                lambda x: [highlight_flagged(val) for val in x], subset=["Status"]
+            )
             .background_gradient(
                 subset=["Risco (%)"],
                 cmap="PuBu",
@@ -288,32 +264,30 @@ def display_openai_results(results, use_log_scale: bool = False):
             )
             .format({"Risco (%)": "{:.2f}%"})
         )
-        
-        st.dataframe(
-            styled_df,
-            use_container_width=True,
-            hide_index=True
-        )
-        
+
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
         # Show warning if any category is flagged
         if flagged:
-            st.warning("⚠️ Este conteúdo contém elementos que podem ser considerados inadequados.")
-        
+            st.warning(
+                "⚠️ Este conteúdo contém elementos que podem ser considerados inadequados."
+            )
+
         # --- Summary View ---
         st.divider()
         st.subheader("Visão Resumida", divider="rainbow")
-        
+
         # Calculate max value for scaling
         max_risk = max(x["Risco (%)"] for x in table_data) if table_data else 10
-        
+
         # Apply log scale if requested
         if use_log_scale and max_risk > 0:
             # Add small epsilon to avoid log(0)
             log_scale = np.log10(max_risk + 0.0001) + 1
-            max_scale = 10 ** log_scale
+            max_scale = 10**log_scale
         else:
             max_scale = max(10, max_risk)  # Minimum scale of 10%
-        
+
         # Display the table with progress bars
         st.dataframe(
             df_detailed.rename(columns={"Risco (%)": "Risco"}),
@@ -329,9 +303,9 @@ def display_openai_results(results, use_log_scale: bool = False):
                 ),
             },
             hide_index=True,
-            use_container_width=True
+            use_container_width=True,
         )
-        
+
         # Show current scale info
         scale_type = "logarítmica" if use_log_scale else "linear"
         st.caption(f"Escala: {scale_type} | Máximo risco: {max_risk:.2f}%")

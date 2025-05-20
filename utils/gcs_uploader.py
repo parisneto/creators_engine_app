@@ -4,12 +4,34 @@
 # 2024-03-27: Utilitário para upload de arquivos no Google Cloud Storage
 """
 
-import json
 import hashlib
+import json
+import logging
 import os
 from datetime import datetime
+from typing import Any, Dict, Optional
+
 from google.cloud import storage
+
 from utils.config import GCS_BUCKET, GCS_VISION_PREFIX
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
+
+def has_required_schema(data: Dict[str, Any]) -> bool:
+    """
+    Check if the result has all required top-level keys.
+
+    Args:
+        data: Dictionary with vision and moderation results
+
+    Returns:
+        bool: True if all required keys are present
+    """
+    required_keys = {"labelAnnotations", "safeSearchAnnotation", "openaiModeration"}
+    return all(key in data for key in required_keys)
 
 
 def get_file_hash(content: bytes) -> str:
@@ -37,7 +59,7 @@ def sanitize_filename(filename: str) -> str:
     """
     # Remove invalid characters
     valid_chars = "-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    sanitized = ''.join(c for c in filename if c in valid_chars)
+    sanitized = "".join(c for c in filename if c in valid_chars)
 
     # Ensure filename isn't too long
     if len(sanitized) > 50:
@@ -71,10 +93,7 @@ def check_image_exists(user_email: str, file_hash: str) -> tuple[bool, dict, str
     print(f"Checking for existing image with hash: {hash_short}")
 
     # Lista todos os arquivos na pasta de imagens do usuário
-    blobs = list(client.list_blobs(
-        bucket,
-        prefix=f"{user_prefix}/images/"
-    ))
+    blobs = list(client.list_blobs(bucket, prefix=f"{user_prefix}/images/"))
 
     # Procurar por arquivo com o mesmo hash (primeiros 8 chars)
     for blob in blobs:
@@ -100,7 +119,9 @@ def check_image_exists(user_email: str, file_hash: str) -> tuple[bool, dict, str
     return False, None, None
 
 
-def upload_to_gcs(user_email: str, content: bytes, original_filename: str) -> tuple[str, str]:
+def upload_to_gcs(
+    user_email: str, content: bytes, original_filename: str
+) -> tuple[str, str]:
     """
     Faz upload de um arquivo para o Google Cloud Storage.
 
@@ -144,14 +165,20 @@ def upload_to_gcs(user_email: str, content: bytes, original_filename: str) -> tu
     return blob.public_url, f"gs://{GCS_BUCKET}/{blob_path}"
 
 
-def upload_vision_results(user_email: str, results: dict, image_path: str) -> str:
+def upload_vision_results(
+    user_email: str,
+    results: dict,
+    image_path: str,
+    openai_results: Optional[dict] = None,
+) -> str:
     """
-    Faz upload dos resultados do Vision AI para o GCS.
+    Faz upload dos resultados do Vision AI e OpenAI Moderation para o GCS.
 
     Args:
         user_email (str): Email do usuário
         results (dict): Resultados do Vision AI
         image_path (str): Caminho completo da imagem no GCS
+        openai_results (dict, optional): Resultados do OpenAI Moderation
 
     Returns:
         str: Caminho do arquivo de resultados no GCS
@@ -169,13 +196,41 @@ def upload_vision_results(user_email: str, results: dict, image_path: str) -> st
     # Gerar caminho completo
     blob_path = f"{GCS_VISION_PREFIX}/{user_email}/results/{results_filename}"
 
+    # Verificar se já existe um arquivo de resultados
+    existing_results = {}
+    try:
+        blob = bucket.blob(blob_path)
+        if blob.exists():
+            existing_results = json.loads(blob.download_as_text())
+
+            # Criar backup do arquivo existente
+            backup_blob = bucket.blob(f"{blob_path}_old")
+            if not backup_blob.exists():
+                backup_blob.upload_from_string(
+                    json.dumps(existing_results, indent=2),
+                    content_type="application/json",
+                )
+    except Exception as e:
+        logger.warning(f"Could not read existing results: {e}")
+
+    # Preparar resultados para upload
+    upload_data = {
+        **existing_results,  # Manter dados existentes
+        "labelAnnotations": results.get("labelAnnotations", []),
+        "safeSearchAnnotation": results.get("safeSearchAnnotation", {}),
+    }
+
+    # Adicionar resultados do OpenAI se fornecidos
+    if openai_results:
+        upload_data["openaiModeration"] = openai_results
+
     # Fazer upload dos resultados
     blob = bucket.blob(blob_path)
     blob.upload_from_string(
-        json.dumps(results, indent=2),
-        content_type='application/json'
+        json.dumps(upload_data, indent=2), content_type="application/json"
     )
 
+    logger.info(f"Results uploaded to gs://{GCS_BUCKET}/{blob_path}")
     return f"gs://{GCS_BUCKET}/{blob_path}"
 
 
