@@ -3,6 +3,7 @@
 PAGE_CONFIG = {
     "home": ("Home", "🏠", "modules.home"),
     "metadata": ("Metadata", "📊", "modules.metadata"),
+    "thumbnails": ("Thumbnails Clinic", "🧱", "modules.thumbs_safe"),
     "analytics2": ("Analytics2 New", "⚡️", "modules.analytics2"),
     "datastories": ("Data Stories", "🚀", "modules.datastories"),
     "playlist": ("Data Stories Playlist", "⚛️", "modules.datastories_playlist"),
