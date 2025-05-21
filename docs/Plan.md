@@ -13,6 +13,9 @@ Pending:
 - clean Analytics2 ( bare minimum)
 - Metadata inspector on best practices
 - Custom Filter Logic: Allow for custom filter logic (e.g., ranges, regex) if your analysis requires it.
+- move null treatment to utils to address strings "null" skewing null counts.
+    def diagnose_nulls(df, apply_to_global=False):
+
 
 
 ```code :
