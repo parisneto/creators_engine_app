@@ -60,11 +60,11 @@ DATASET_FEATURE_MAP = {
                 "description": "Age of the video in days since publication, calculated at the time of slope computation. (Dtype: Int32)",
             },
             "position": {
-                "type": "text",
-                "subtype": "generic",
-                "example": "N/A",
-                "use": "contextual_information",
-                "description": "Positional or ranking data for the video; specific meaning may vary (e.g., playlist position, search rank). Clarification might be needed. (Dtype: object)",
+                "type": "numerical",
+                "subtype": "discrete",
+                "example": 0,
+                "use": "ranking, playlist_order",
+                "description": "The order in which the item appears in the playlist. The value uses a zero-based index, so the first item has a position of 0, the second item has a position of 1, and so forth. (Dtype: object)",
             },
             "title": {
                 "type": "text",
@@ -110,10 +110,10 @@ DATASET_FEATURE_MAP = {
             },
             "tags": {
                 "type": "text",
-                "subtype": "list_of_strings_pipe_separated",
-                "example": "tag1|tag2|funny",
+                "subtype": "list_of_strings_comma_separated",
+                "example": "Flávia Ferrari,Flavia Ferrari,A Dica do Dia,dicas domésticas",
                 "use": "nlp_feature, search, analysis",
-                "description": "Pipe-separated list of tags associated with the video. (Dtype: object, Nullable)",
+                "description": "Comma-separated list of tags associated with the video. May contain null values. (Dtype: object, Nullable)",
             },
             "duration_formatted_seconds": {
                 "type": "numerical",
@@ -188,105 +188,105 @@ DATASET_FEATURE_MAP = {
             "view_count_slope": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 100.5,
+                "example": 95425,
                 "use": "trend_analysis, model_feature, y_axis",
                 "description": "Calculated slope (rate of change per day) for view_count based on historical data using custom linear regression. (Dtype: int64, treated as continuous)",
             },
             "like_count_slope": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 10.2,
+                "example": 55675,
                 "use": "trend_analysis, model_feature, y_axis",
                 "description": "Calculated slope (rate of change per day) for like_count based on historical data using custom linear regression. (Dtype: int64, treated as continuous)",
             },
             "comment_count_slope": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 1.5,
+                "example": 429,
                 "use": "trend_analysis, model_feature, y_axis",
                 "description": "Calculated slope (rate of change per day) for comment_count based on historical data using custom linear regression. (Dtype: int64, treated as continuous)",
             },
             "linear_view_count_speed": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 90.0,
+                "example": 251.25,
                 "use": "comparison, analysis, benchmark",
                 "description": "Simple linear speed for view_count (e.g., total views / age_in_days at slope calculation time). (Dtype: float64)",
             },
             "slope_view_count_speed": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 100.5,
+                "example": 209.06,
                 "use": "trend_analysis, model_feature, comparison",
                 "description": "Slope of view_count (views per day), derived from custom regression. Identical to view_count_slope. (Dtype: float64)",
             },
             "linear_like_count_speed": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 8.0,
+                "example": 25.52,
                 "use": "comparison, analysis, benchmark",
                 "description": "Simple linear speed for like_count. (Dtype: float64, Nullable)",
             },
             "slope_like_count_speed": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 10.2,
+                "example": 122.46,
                 "use": "trend_analysis, model_feature, comparison",
                 "description": "Slope of like_count (likes per day), derived from custom regression. Identical to like_count_slope. (Dtype: float64, Nullable)",
             },
             "linear_comment_count_speed": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 1.0,
+                "example": 0.79,
                 "use": "comparison, analysis, benchmark",
                 "description": "Simple linear speed for comment_count. (Dtype: float64)",
             },
             "slope_comment_count_speed": {
                 "type": "numerical",
                 "subtype": "continuous_rate",
-                "example": 1.5,
+                "example": 0.13,
                 "use": "trend_analysis, model_feature, comparison",
                 "description": "Slope of comment_count (comments per day), derived from custom regression. Identical to comment_count_slope. (Dtype: float64)",
             },
             "predicted_view_count_7d": {
                 "type": "numerical",
                 "subtype": "continuous_prediction",
-                "example": 700.0,
+                "example": 398.18,
                 "use": "forecasting, analysis, kpi",
                 "description": "Predicted total view_count in the next 7 days based on the current slope. (Dtype: float64)",
             },
             "predicted_view_count_30d": {
                 "type": "numerical",
                 "subtype": "continuous_prediction",
-                "example": 3000.0,
+                "example": 524.70,
                 "use": "forecasting, analysis, kpi",
                 "description": "Predicted total view_count in the next 30 days based on the current slope. (Dtype: float64)",
             },
             "predicted_view_count_365d": {
                 "type": "numerical",
                 "subtype": "continuous_prediction",
-                "example": 36500.0,
+                "example": 4362.81,
                 "use": "forecasting, analysis, kpi",
                 "description": "Predicted total view_count in the next 365 days based on the current slope. (Dtype: float64)",
             },
             "growth_view_count_7d_percent": {
                 "type": "numerical",
                 "subtype": "continuous_percentage",
-                "example": 5.5,
+                "example": 8.37,
                 "use": "growth_analysis, kpi, forecasting",
                 "description": "Predicted percentage growth in view_count over the next 7 days. (Dtype: float64)",
             },
             "growth_view_count_30d_percent": {
                 "type": "numerical",
                 "subtype": "continuous_percentage",
-                "example": 25.0,
+                "example": 39.57,
                 "use": "growth_analysis, kpi, forecasting",
                 "description": "Predicted percentage growth in view_count over the next 30 days. (Dtype: float64)",
             },
             "growth_view_count_365d_percent": {
                 "type": "numerical",
                 "subtype": "continuous_percentage",
-                "example": 300.0,
+                "example": 97.84,
                 "use": "growth_analysis, kpi, forecasting",
                 "description": "Predicted percentage growth in view_count over the next 365 days. (Dtype: float64)",
             },
@@ -389,6 +389,38 @@ def render():
 
     st.write("Running from", os.path.abspath(os.getcwd()))
 
+    st.divider()
+    st.subheader("Feature Map output examples")
+    
+    # Tags examples
+    st.write("**Tags examples:**")
+    st.code(df_slope_full[df_slope_full["tags"].notnull()]["tags"].sample(5))
+    
+    # Slope examples
+    st.write("**Slope and speed examples:**")
+    slope_cols = [
+        "view_count_slope", 
+        "like_count_slope", 
+        "comment_count_slope",
+        "linear_view_count_speed",
+        "slope_view_count_speed"
+    ]
+    st.code(df_slope_full[slope_cols].sample(5))
+    
+    # Prediction examples
+    st.write("**Prediction and growth examples:**")
+    prediction_cols = [
+        "predicted_view_count_7d",
+        "predicted_view_count_30d",
+        "predicted_view_count_365d",
+        "growth_view_count_7d_percent",
+        "growth_view_count_30d_percent",
+        "growth_view_count_365d_percent"
+    ]
+    st.code(df_slope_full[prediction_cols].sample(5))
+    
+    st.divider()
+
     # st.write("df_slope_full.shape", df_slope_full.shape)
     # st.write("df_slope_full[[published_at, slope_date, slope_timestamp]].sample(5)")
     # st.code(df_slope_full[["published_at", "slope_date", "slope_timestamp"]].sample(5))
@@ -397,47 +429,42 @@ def render():
 
     # Null treatment is now handled in the dataloader.py get_user_dataframe function
     # and is cached for 15 minutes
-    
-    # We can still diagnose nulls to show the current state without modifying the DataFrame
-    st.subheader("Current Null Values Diagnosis")
-    null_counts = df_slope_full.isnull().sum()
-    null_percentages = (null_counts / len(df_slope_full)) * 100
-    null_info = pd.DataFrame({"Null Count": null_counts, "Null Percentage": null_percentages})
-    null_info = null_info[null_info["Null Count"] > 0]
-    if not null_info.empty:
-        st.write("Columns with missing values:")
-        st.code(null_info)
-    else:
-        st.write("No missing values found in the dataset.")
 
-    st.divider()
-    st.subheader("Feature Map output examples")
-    st.code(df_slope_full[df_slope_full["tags"].notnull()]["tags"].sample(11))
-    st.divider()
+    # # We can still diagnose nulls to show the current state without modifying the DataFrame
+    # st.subheader("Current Null Values Diagnosis")
+    # null_counts = df_slope_full.isnull().sum()
+    # null_percentages = (null_counts / len(df_slope_full)) * 100
+    # null_info = pd.DataFrame({"Null Count": null_counts, "Null Percentage": null_percentages})
+    # null_info = null_info[null_info["Null Count"] > 0]
+    # if not null_info.empty:
+    #     st.write("Columns with missing values:")
+    #     st.code(null_info)
+    # else:
+    #     st.write("No missing values found in the dataset.")
 
-    # st.selectbox("Select a column", df_slope_full.columns.tolist())
-    st.selectbox("Select a column", (1, 2, 3))
+    # # st.selectbox("Select a column", df_slope_full.columns.tolist())
+    # st.selectbox("Select a column", (1, 2, 3))
 
-    if False:
-        # Show verification of the treatment
-        st.subheader("Verification After Treatment")
-        if "tags" in df_slope_full.columns:
-            st.write(
-                f"Number of 'null' string values in tags column: {df_slope_full[df_slope_full['tags'] == 'null'].shape[0]}"
-            )
-            if len(df_slope_full[df_slope_full["tags"].notnull()]) > 0:
-                st.write("Sample of non-null tag values:")
-                st.code(
-                    df_slope_full[df_slope_full["tags"].notnull()]["tags"].sample(
-                        min(
-                            5,
-                            len(df_slope_full[df_slope_full["tags"].notnull()]),
-                        )
-                    )
-                )
+    # if False:
+    #     # Show verification of the treatment
+    #     st.subheader("Verification After Treatment")
+    #     if "tags" in df_slope_full.columns:
+    #         st.write(
+    #             f"Number of 'null' string values in tags column: {df_slope_full[df_slope_full['tags'] == 'null'].shape[0]}"
+    #         )
+    #         if len(df_slope_full[df_slope_full["tags"].notnull()]) > 0:
+    #             st.write("Sample of non-null tag values:")
+    #             st.code(
+    #                 df_slope_full[df_slope_full["tags"].notnull()]["tags"].sample(
+    #                     min(
+    #                         5,
+    #                         len(df_slope_full[df_slope_full["tags"].notnull()]),
+    #                     )
+    #                 )
+    #             )
 
-        # The global df_slope_full has been modified in-place
-        # No need to return anything in a Streamlit app
+    # The global df_slope_full has been modified in-place
+    # No need to return anything in a Streamlit app
 
 
 # =================================================================
