@@ -84,7 +84,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --timeout=60s \
   --concurrency=80 \
   --port=8080 \
-  --update-secrets=/secrets/vision.json=creators-engine-vision-service-account:latest,OPENAI_API_KEY=projects/fleet-gamma-448616-m1/secrets/creators-engine-openai-apikey/versions/latest \
+  --update-secrets=/secrets/vision.json=creators-engine-vision-service-account:latest,OPENAI_API_KEY=creators-engine-openai-apikey:latest \
   --set-env-vars=GOOGLE_APPLICATION_CREDENTIALS=/secrets/vision.json \
   --quiet
 
