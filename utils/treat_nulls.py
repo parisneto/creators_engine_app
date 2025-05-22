@@ -45,7 +45,9 @@ def treat_nulls(df, verbose=False):
             before_count = df[col].isnull().sum()
             
             # Replace various null representations with np.nan
-            df[col] = df[col].replace(null_representations, np.nan)
+            # Use infer_objects() to explicitly handle downcasting behavior
+            # This addresses the FutureWarning about silent downcasting in replace()
+            df[col] = df[col].replace(null_representations, np.nan).infer_objects(copy=False)
             
             # Count after replacement
             after_count = df[col].isnull().sum()
