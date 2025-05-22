@@ -89,7 +89,7 @@ gcloud run deploy "${CLOUD_RUN_SERVICE_NAME}" \
   --max-instances 2 \
   --timeout 60s \
   --concurrency 80 \
-  --update-secrets=/secrets/vision.json=creators-engine-vision-service-account:latest,OPENAI_API_KEY=creators-engine-openai-apikey:latest \
+  --update-secrets=/secrets/vision.json=creators-engine-vision-service-account:latest,OPENAI_API_KEY=projects/fleet-gamma-448616-m1/secrets/creators-engine-openai-apikey/versions/latest \
   --set-env-vars=GOOGLE_APPLICATION_CREDENTIALS=/secrets/vision.json
 
 echo "Build and Deploy script finished."
