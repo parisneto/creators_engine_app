@@ -1,6 +1,7 @@
 import datetime
 
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
@@ -39,6 +40,8 @@ def render():
     df_slope_full.shape : {df_slope_full.shape} \n
     df_slope_full.columns.tolist() : {df_slope_full.columns.tolist()} \n
     df_slope_full.describe() : {df_slope_full.describe()}
+
+    df_slope_full['channel_title'].unique() : {df_slope_full["channel_title"].unique()}
     """
     # df_slope_full.info()  : {df_slope_full.info()} \n <-- not supported
 
@@ -142,9 +145,11 @@ def render():
     plot_df = df_top20.copy()
     if normalize_metrics and not plot_df.empty:
         for col in ["view_count_slope", "comment_count_slope", "like_count_slope"]:
-            min_val = plot_df[col].min()
-            max_val = plot_df[col].max()
+            # Use skipna=True to handle NaN values properly during min/max calculation
+            min_val = plot_df[col].min(skipna=True)
+            max_val = plot_df[col].max(skipna=True)
             if max_val > min_val:
+                # Handle NaN values during normalization
                 plot_df[f"{col}_norm"] = (plot_df[col] - min_val) / (max_val - min_val)
             else:
                 plot_df[f"{col}_norm"] = 0.0
@@ -206,13 +211,17 @@ def render():
         hover_texts = []
         for (_, row), date in zip(group.iterrows(), hover_dates):
             if normalize_metrics:
-                view_val = f"{row[x_col]:.3f}"
-                comment_val = f"{row[y_col]:.3f}"
-                like_val = f"{row[z_col]:.3f}"
+                # For normalized values, handle NaN with a safe formatting approach
+                view_val = f"{row[x_col]:.3f}" if not pd.isna(row[x_col]) else "N/A"
+                comment_val = f"{row[y_col]:.3f}" if not pd.isna(row[y_col]) else "N/A"
+                like_val = f"{row[z_col]:.3f}" if not pd.isna(row[z_col]) else "N/A"
             else:
-                view_val = f"{int(row[x_col]):,}"
-                comment_val = f"{int(row[y_col]):,}"
-                like_val = f"{int(row[z_col]):,}"
+                # For non-normalized values, safely convert to int only if not NaN
+                view_val = f"{int(row[x_col]):,}" if not pd.isna(row[x_col]) else "N/A"
+                comment_val = (
+                    f"{int(row[y_col]):,}" if not pd.isna(row[y_col]) else "N/A"
+                )
+                like_val = f"{int(row[z_col]):,}" if not pd.isna(row[z_col]) else "N/A"
             hover_texts.append(
                 f"{label_prefix}Title: {row['title']}<br><br>SPEED COUNTS:<br>Linear ViewSPD: {row['linear_view_count_speed']:.0f}<br>Slope ViewSPD: {row['slope_view_count_speed']:.0f}<br><br>METADATA:<br>Age in Days: {row['age_in_days']:.0f}<br>Observed Date: {date}<br><br>METRICS:<br>View count: {view_val}<br>Comment count: {comment_val}<br>Like count: {like_val}"
             )
